@@ -1,7 +1,7 @@
 CREATE TABLE net.connections
 (
-    node_a IPv6,
-    node_b IPv6,
+    node_a IPv6, -- IP for one side of the connection (the lower IP numerically)
+    node_b IPv6, -- IP for the other side of the connection (the higher IP numerically)
 
     num_packets_state   AggregateFunction(count),
     first_seen_state    AggregateFunction(min, DateTime64(6, 'UTC')), -- time of first packet seen on this connection

@@ -1,25 +1,25 @@
 CREATE TABLE net.nodes
 (
-    ip IPv6,
-    macs_state AggregateFunction(groupUniqArray, FixedString(6)),
+    ip IPv6, -- IP address of the node
+    macs_state AggregateFunction(groupUniqArray, FixedString(6)), -- known MAC addresses related to IP
 
     -- packet/time rollups
-    num_packets_state  AggregateFunction(count),
-    first_seen_state   AggregateFunction(min, DateTime64(6, 'UTC')),
-    last_seen_state    AggregateFunction(max, DateTime64(6, 'UTC')),
+    num_packets_state  AggregateFunction(count), -- total packets seen with IP
+    first_seen_state   AggregateFunction(min, DateTime64(6, 'UTC')), -- time of first packet seen with IP
+    last_seen_state    AggregateFunction(max, DateTime64(6, 'UTC')), -- time of last packet seen with IP
 
     -- unique peers (exact cardinality is expensive; uniqCombined is efficient)
-    num_connections_state AggregateFunction(uniqCombined, IPv6),
+    num_connections_state AggregateFunction(uniqCombined, IPv6), -- number of unique IPs node communicated with
 
     -- which L4 protocols this node used across all connections
-    l4_protos_state    AggregateFunction(groupUniqArray, UInt8),
+    l4_protos_state    AggregateFunction(groupUniqArray, UInt8), -- all L4 protocols seen with IP
 
     -- per-protocol port sets (all ports this node used, regardless of side)
-    tcp_ports_state    AggregateFunction(groupUniqArray, UInt16),
-    udp_ports_state    AggregateFunction(groupUniqArray, UInt16),
+    tcp_ports_state    AggregateFunction(groupUniqArray, UInt16), -- all TCP ports seen with IP
+    udp_ports_state    AggregateFunction(groupUniqArray, UInt16), -- all UDP ports seen with IP
 
     -- optional label you can backfill/update later
-    device_type        LowCardinality(String) DEFAULT ''
+    device_type        LowCardinality(String) DEFAULT '' -- e.g. 'desktop', 'mobile', 'server', etc. (if known)
 )
     ENGINE = AggregatingMergeTree
         ORDER BY (ip);
