@@ -5,7 +5,6 @@ CREATE TABLE net.packets
 
     -- capture/source metadata (optional but useful)
     iface         LowCardinality(String)      DEFAULT '',
-    sensor_id     LowCardinality(String)      DEFAULT '',
 
     -- protocol layering
     l2_proto Enum8(
@@ -23,7 +22,6 @@ CREATE TABLE net.packets
     -- link layer
     src_mac       FixedString(6),
     dst_mac       FixedString(6),
-    vlan_id       Nullable(UInt16),
 
     -- network & transport (store IPs as IPv6; upcast IPv4 -> IPv6)
     src_ip        IPv6,
@@ -33,14 +31,13 @@ CREATE TABLE net.packets
 
     -- helpful header bits (optional, keep nullable)
     ip_ttl        Nullable(UInt8),
-    ip_tos        Nullable(UInt8),     -- DSCP/ECN packed
-    tcp_flags     Nullable(UInt8),
+    tcp_flags     Nullable(UInt16),
 
     -- sizes
     packet_len    UInt16,              -- fits up to 65535 (pcap max)
 
     -- payload handling
-    payload       String CODEC(ZSTD(9)),          -- binary-safe raw bytes
+    payload       String CODEC(LZ4),          -- binary-safe raw bytes
     payload_sha256 FixedString(32) DEFAULT '',    -- hex digest for dedup/lookup
     payload_ref   Nullable(String)                -- e.g., S3/MinIO key if externalized
 )
