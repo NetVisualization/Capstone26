@@ -1,6 +1,7 @@
 CREATE TABLE net.nodes
 (
     ip IPv6,
+    macs_state AggregateFunction(groupUniqArray, FixedString(6)),
 
     -- packet/time rollups
     num_packets_state  AggregateFunction(count),
@@ -65,4 +66,22 @@ SELECT
 
     '' AS device_type
 FROM net.connections
+GROUP BY ip;
+
+CREATE MATERIALIZED VIEW IF NOT EXISTS net.mv_packets_to_nodes_macs
+            TO net.nodes (ip, macs_state)
+AS
+-- source side
+SELECT
+    src_ip AS ip,
+    groupUniqArrayState(src_mac) AS macs_state
+FROM net.packets
+GROUP BY ip
+
+UNION ALL
+-- dest side
+SELECT
+    dst_ip AS ip,
+    groupUniqArrayState(dst_mac) AS macs_state
+FROM net.packets
 GROUP BY ip;

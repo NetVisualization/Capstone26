@@ -11,7 +11,6 @@ CREATE TABLE net.packets
 
     src_mac       FixedString(6),
     dst_mac       FixedString(6),
-    vlan_id       Nullable(UInt16),
 
     src_ip        IPv6,
     dst_ip        IPv6,
