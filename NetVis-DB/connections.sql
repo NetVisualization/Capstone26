@@ -1,48 +1,38 @@
--- NODE_A
-
--- NODE_B
-
--- NUM_PACKETS
-
--- PORTS (Array)
-
--- PROTOCOLS (TCP = 6, UDP = 17, ICMP = 1, etc.)
-
--- LAST_SEEN (DateTime)
-
 CREATE TABLE net.connections
 (
-    -- core timing
-    first_seen    DateTime64(6, 'UTC'),
-    last_seen     DateTime64(6, 'UTC'),
+    node_a IPv6,
+    node_b IPv6,
 
-    -- capture/source metadata (optional but useful)
-    iface         LowCardinality(String)      DEFAULT '',
+    num_packets_state   AggregateFunction(count),
+    first_seen_state    AggregateFunction(min, DateTime64(6, 'UTC')),
+    last_seen_state     AggregateFunction(max, DateTime64(6, 'UTC')),
 
-    -- network & transport (store IPs as IPv6; upcast IPv4 -> IPv6)
-    node_a        IPv6,
-    node_b        IPv6,
-    ports         Array(UInt16),               -- all observed ports for this connection
-    protocols     Array(UInt16),               -- all observed L4 protocols for this connection
+    protos_state        AggregateFunction(groupUniqArray, UInt8),
 
-    num_packets   UInt32,                      -- total packets observed in this connection
-
-    -- helpful header bits (optional, keep nullable)
-    ip_ttl_a      Nullable(UInt8),             -- TTL from node_a to node_b
-    ip_ttl_b      Nullable(UInt8),             -- TTL from node_b to node_a
-
-    tcp_flags_a   Nullable(UInt16),            -- aggregated TCP flags from node_a to node_b
-    tcp_flags_b   Nullable(UInt16),            -- aggregated TCP flags from node_b to node_a
-
-    -- sizes
-    total_bytes_a UInt64,                      -- total bytes from node_a to node_b
-    total_bytes_b UInt64,                      -- total bytes from node_b to node_a
-
-    total_payload_bytes_a UInt64,              -- total payload bytes from node_a to node_b
-    total_payload_bytes_b UInt64               -- total payload bytes from node_b to node_a
+    tcp_src_ports_state AggregateFunction(groupUniqArray, UInt16),
+    tcp_dst_ports_state AggregateFunction(groupUniqArray, UInt16),
+    udp_src_ports_state AggregateFunction(groupUniqArray, UInt16),
+    udp_dst_ports_state AggregateFunction(groupUniqArray, UInt16)
 )
-    ENGINE = MergeTree
-        PARTITION BY toDate(first_seen)
-        ORDER BY (node_a, node_b, first_seen)
-        SETTINGS index_granularity = 8192, allow_nullable_key = 1;
+    ENGINE = AggregatingMergeTree
+        ORDER BY (node_a, node_b);
 
+CREATE MATERIALIZED VIEW net.mv_packets_to_connections
+            TO net.connections
+AS
+SELECT
+    if(src_ip <= dst_ip, src_ip, dst_ip) AS node_a,
+    if(src_ip <= dst_ip, dst_ip, src_ip) AS node_b,
+
+    countState()                                    AS num_packets_state,
+    minState(ts)                                    AS first_seen_state,
+    maxState(ts)                                    AS last_seen_state,
+
+    groupUniqArrayState(toUInt8(l4_proto))          AS protos_state,
+
+    groupUniqArrayStateIf(assumeNotNull(src_port), l4_proto='TCP' AND isNotNull(src_port)) AS tcp_src_ports_state,
+    groupUniqArrayStateIf(assumeNotNull(dst_port), l4_proto='TCP' AND isNotNull(dst_port)) AS tcp_dst_ports_state,
+    groupUniqArrayStateIf(assumeNotNull(src_port), l4_proto='UDP' AND isNotNull(src_port)) AS udp_src_ports_state,
+    groupUniqArrayStateIf(assumeNotNull(dst_port), l4_proto='UDP' AND isNotNull(dst_port)) AS udp_dst_ports_state
+FROM net.packets
+GROUP BY node_a, node_b;
