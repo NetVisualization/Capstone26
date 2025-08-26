@@ -4,15 +4,15 @@ CREATE TABLE net.connections
     node_b IPv6,
 
     num_packets_state   AggregateFunction(count),
-    first_seen_state    AggregateFunction(min, DateTime64(6, 'UTC')),
-    last_seen_state     AggregateFunction(max, DateTime64(6, 'UTC')),
+    first_seen_state    AggregateFunction(min, DateTime64(6, 'UTC')), -- time of first packet seen on this connection
+    last_seen_state     AggregateFunction(max, DateTime64(6, 'UTC')), -- time of last packet seen on this connection
 
-    protos_state        AggregateFunction(groupUniqArray, UInt8),
+    protos_state        AggregateFunction(groupUniqArray, UInt8), -- all L4 protocols seen on this connection
 
-    tcp_src_ports_state AggregateFunction(groupUniqArray, UInt16),
-    tcp_dst_ports_state AggregateFunction(groupUniqArray, UInt16),
-    udp_src_ports_state AggregateFunction(groupUniqArray, UInt16),
-    udp_dst_ports_state AggregateFunction(groupUniqArray, UInt16)
+    tcp_src_ports_state AggregateFunction(groupUniqArray, UInt16), -- all TCP ports seen on src side
+    tcp_dst_ports_state AggregateFunction(groupUniqArray, UInt16), -- all TCP ports seen on dst side
+    udp_src_ports_state AggregateFunction(groupUniqArray, UInt16), -- all UDP ports seen on src side
+    udp_dst_ports_state AggregateFunction(groupUniqArray, UInt16) -- all UDP ports seen on dst side
 )
     ENGINE = AggregatingMergeTree
         ORDER BY (node_a, node_b);

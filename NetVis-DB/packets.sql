@@ -1,8 +1,7 @@
 CREATE TABLE net.packets
 (
-    ts            DateTime64(6, 'UTC'),
-    iface         LowCardinality(String) DEFAULT '',
-    sensor_id     LowCardinality(String) DEFAULT '',
+    ts            DateTime64(6, 'UTC'), -- packet timestamp, in microsecond precision
+    iface         LowCardinality(String) DEFAULT '', -- interface name or ID
 
     l2_proto Enum8('ETHERNET' = 1, 'ARP' = 2, 'PPPoE' = 3, 'IEEE802_11' = 4, 'OTHER' = 127),
     l3_proto Enum8('IPv4' = 1, 'IPv6' = 2, 'MPLS' = 3, 'ARP' = 4, 'NON_IP' = 127),
