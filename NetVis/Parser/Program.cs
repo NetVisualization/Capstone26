@@ -11,17 +11,18 @@ using (var connection = new ClickHouseConnection(connectionString))
     connection.Open();
     Console.WriteLine("Connected");
     
-    using (var command = connection.CreateCommand())
-    {
-        command.AddParameter("id", "Int64", 10);
-        command.CommandText = "USE net;";
-        command.ExecuteNonQuery();
-        command.CommandText = "SHOW TABLES;";
-        var rowsAffected = command.ExecuteNonQuery();
-        using var reader = command.ExecuteReader();
-        while (reader.Read())
+        connection.Open();
+
+        using (var command = connection.CreateCommand())
         {
-            Console.WriteLine(reader.GetString(0));
+            command.CommandText = "CREATE TABLE IF NOT EXISTS net.test (id Int64, name String) ENGINE = Memory";
+            command.ExecuteNonQuery();
+ 
+            command.AddParameter("id", "Int64", 1);
+            command.AddParameter("name", "String", "test1");
+            command.CommandText = "INSERT INTO net.test (id, name) VALUES ({id:Int64}, {name:String})";
+            command.ExecuteNonQuery();
+            
         }
-    }
+    
 }
