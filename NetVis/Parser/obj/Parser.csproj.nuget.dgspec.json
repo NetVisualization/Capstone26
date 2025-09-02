@@ -46,6 +46,10 @@
             "ClickHouse.Driver": {
               "target": "Package",
               "version": "[0.7.20, )"
+            },
+            "SharpPcap": {
+              "target": "Package",
+              "version": "[6.3.1, )"
             }
           },
           "imports": [

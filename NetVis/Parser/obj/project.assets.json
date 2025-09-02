@@ -319,6 +319,18 @@
           }
         }
       },
+      "PacketDotNet/1.4.8": {
+        "type": "package",
+        "dependencies": {
+          "System.Runtime.CompilerServices.Unsafe": "6.0.0"
+        },
+        "compile": {
+          "lib/net8.0/PacketDotNet.dll": {}
+        },
+        "runtime": {
+          "lib/net8.0/PacketDotNet.dll": {}
+        }
+      },
       "runtime.debian.8-x64.runtime.native.System.Security.Cryptography.OpenSsl/4.3.2": {
         "type": "package",
         "runtimeTargets": {
@@ -475,6 +487,20 @@
             "assetType": "native",
             "rid": "ubuntu.16.10-x64"
           }
+        }
+      },
+      "SharpPcap/6.3.1": {
+        "type": "package",
+        "dependencies": {
+          "PacketDotNet": "1.4.8",
+          "System.Memory": "4.6.3",
+          "System.Text.Encoding.CodePages": "9.0.5"
+        },
+        "compile": {
+          "lib/net8.0/SharpPcap.dll": {}
+        },
+        "runtime": {
+          "lib/net8.0/SharpPcap.dll": {}
         }
       },
       "System.Collections/4.3.0": {
@@ -693,6 +719,15 @@
           "lib/netstandard1.6/System.Linq.dll": {}
         }
       },
+      "System.Memory/4.6.3": {
+        "type": "package",
+        "compile": {
+          "lib/netcoreapp2.1/_._": {}
+        },
+        "runtime": {
+          "lib/netcoreapp2.1/_._": {}
+        }
+      },
       "System.Net.Http/4.3.4": {
         "type": "package",
         "dependencies": {
@@ -804,6 +839,22 @@
           "ref/netstandard1.5/System.Runtime.dll": {
             "related": ".xml"
           }
+        }
+      },
+      "System.Runtime.CompilerServices.Unsafe/6.0.0": {
+        "type": "package",
+        "compile": {
+          "lib/net6.0/System.Runtime.CompilerServices.Unsafe.dll": {
+            "related": ".xml"
+          }
+        },
+        "runtime": {
+          "lib/net6.0/System.Runtime.CompilerServices.Unsafe.dll": {
+            "related": ".xml"
+          }
+        },
+        "build": {
+          "buildTransitive/netcoreapp3.1/_._": {}
         }
       },
       "System.Runtime.Extensions/4.3.0": {
@@ -1094,6 +1145,28 @@
         "compile": {
           "ref/netstandard1.3/System.Text.Encoding.dll": {
             "related": ".xml"
+          }
+        }
+      },
+      "System.Text.Encoding.CodePages/9.0.5": {
+        "type": "package",
+        "compile": {
+          "lib/net8.0/System.Text.Encoding.CodePages.dll": {
+            "related": ".xml"
+          }
+        },
+        "runtime": {
+          "lib/net8.0/System.Text.Encoding.CodePages.dll": {
+            "related": ".xml"
+          }
+        },
+        "build": {
+          "buildTransitive/net8.0/_._": {}
+        },
+        "runtimeTargets": {
+          "runtimes/win/lib/net8.0/System.Text.Encoding.CodePages.dll": {
+            "assetType": "runtime",
+            "rid": "win"
           }
         }
       },
@@ -1723,6 +1796,20 @@
         "nodatime.nuspec"
       ]
     },
+    "PacketDotNet/1.4.8": {
+      "sha512": "j4C4QaJmaPCk0KXsIdsZqmBteKWj5znXBmfbPpu48rE5SW2xwXKVlRf7C3g7VM9aZqMHIQedApEuC71nNX5PaQ==",
+      "type": "package",
+      "path": "packetdotnet/1.4.8",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "lib/net472/PacketDotNet.dll",
+        "lib/net8.0/PacketDotNet.dll",
+        "lib/net9.0/PacketDotNet.dll",
+        "packetdotnet.1.4.8.nupkg.sha512",
+        "packetdotnet.nuspec"
+      ]
+    },
     "runtime.debian.8-x64.runtime.native.System.Security.Cryptography.OpenSsl/4.3.2": {
       "sha512": "7VSGO0URRKoMEAq0Sc9cRz8mb6zbyx/BZDEWhgPdzzpmFhkam3fJ1DAGWFXBI4nGlma+uPKpfuMQP5LXRnOH5g==",
       "type": "package",
@@ -1931,6 +2018,19 @@
         "runtime.ubuntu.16.10-x64.runtime.native.system.security.cryptography.openssl.4.3.2.nupkg.sha512",
         "runtime.ubuntu.16.10-x64.runtime.native.system.security.cryptography.openssl.nuspec",
         "runtimes/ubuntu.16.10-x64/native/System.Security.Cryptography.Native.OpenSsl.so"
+      ]
+    },
+    "SharpPcap/6.3.1": {
+      "sha512": "EWclXz+QdffBRppFR7GDBLyKiAz045RGvu4t4gcMGocVMEq6dRfCnAEx7Ep6qxcPPhH2kz13Y8FqBaHZhsh3Pg==",
+      "type": "package",
+      "path": "sharppcap/6.3.1",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "lib/net8.0/SharpPcap.dll",
+        "lib/netstandard2.0/SharpPcap.dll",
+        "sharppcap.6.3.1.nupkg.sha512",
+        "sharppcap.nuspec"
       ]
     },
     "System.Collections/4.3.0": {
@@ -2653,6 +2753,27 @@
         "system.linq.nuspec"
       ]
     },
+    "System.Memory/4.6.3": {
+      "sha512": "qdcDOgnFZY40+Q9876JUHnlHu7bosOHX8XISRoH94fwk6hgaeQGSgfZd8srWRZNt5bV9ZW2TljcegDNxsf+96A==",
+      "type": "package",
+      "path": "system.memory/4.6.3",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "Icon.png",
+        "PACKAGE.md",
+        "buildTransitive/net461/System.Memory.targets",
+        "buildTransitive/net462/_._",
+        "lib/net462/System.Memory.dll",
+        "lib/net462/System.Memory.xml",
+        "lib/netcoreapp2.1/_._",
+        "lib/netstandard2.0/System.Memory.dll",
+        "lib/netstandard2.0/System.Memory.xml",
+        "lib/netstandard2.1/_._",
+        "system.memory.4.6.3.nupkg.sha512",
+        "system.memory.nuspec"
+      ]
+    },
     "System.Net.Http/4.3.4": {
       "sha512": "aOa2d51SEbmM+H+Csw7yJOuNZoHkrP2XnAurye5HWYgGVVU54YZDvsLUYRv6h18X3sPnjNCANmN7ZhIPiqMcjA==",
       "type": "package",
@@ -3059,6 +3180,31 @@
         "ref/xamarinwatchos10/_._",
         "system.runtime.4.3.0.nupkg.sha512",
         "system.runtime.nuspec"
+      ]
+    },
+    "System.Runtime.CompilerServices.Unsafe/6.0.0": {
+      "sha512": "/iUeP3tq1S0XdNNoMz5C9twLSrM/TH+qElHkXWaPvuNOt+99G75NrV0OS2EqHx5wMN7popYjpc8oTjC1y16DLg==",
+      "type": "package",
+      "path": "system.runtime.compilerservices.unsafe/6.0.0",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "Icon.png",
+        "LICENSE.TXT",
+        "THIRD-PARTY-NOTICES.TXT",
+        "buildTransitive/netcoreapp2.0/System.Runtime.CompilerServices.Unsafe.targets",
+        "buildTransitive/netcoreapp3.1/_._",
+        "lib/net461/System.Runtime.CompilerServices.Unsafe.dll",
+        "lib/net461/System.Runtime.CompilerServices.Unsafe.xml",
+        "lib/net6.0/System.Runtime.CompilerServices.Unsafe.dll",
+        "lib/net6.0/System.Runtime.CompilerServices.Unsafe.xml",
+        "lib/netcoreapp3.1/System.Runtime.CompilerServices.Unsafe.dll",
+        "lib/netcoreapp3.1/System.Runtime.CompilerServices.Unsafe.xml",
+        "lib/netstandard2.0/System.Runtime.CompilerServices.Unsafe.dll",
+        "lib/netstandard2.0/System.Runtime.CompilerServices.Unsafe.xml",
+        "system.runtime.compilerservices.unsafe.6.0.0.nupkg.sha512",
+        "system.runtime.compilerservices.unsafe.nuspec",
+        "useSharedDesignerContext.txt"
       ]
     },
     "System.Runtime.Extensions/4.3.0": {
@@ -3641,6 +3787,44 @@
         "system.text.encoding.nuspec"
       ]
     },
+    "System.Text.Encoding.CodePages/9.0.5": {
+      "sha512": "P6gqCJcVjdWA50Eai95eYdG4ryrb1xCd770NhQrvj847C7m30CJwQqzKykWoEMvV4qvjUazL/m7UMQdMZTp5xw==",
+      "type": "package",
+      "path": "system.text.encoding.codepages/9.0.5",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "Icon.png",
+        "LICENSE.TXT",
+        "PACKAGE.md",
+        "THIRD-PARTY-NOTICES.TXT",
+        "buildTransitive/net461/System.Text.Encoding.CodePages.targets",
+        "buildTransitive/net462/_._",
+        "buildTransitive/net8.0/_._",
+        "buildTransitive/netcoreapp2.0/System.Text.Encoding.CodePages.targets",
+        "lib/MonoAndroid10/_._",
+        "lib/MonoTouch10/_._",
+        "lib/net462/System.Text.Encoding.CodePages.dll",
+        "lib/net462/System.Text.Encoding.CodePages.xml",
+        "lib/net8.0/System.Text.Encoding.CodePages.dll",
+        "lib/net8.0/System.Text.Encoding.CodePages.xml",
+        "lib/net9.0/System.Text.Encoding.CodePages.dll",
+        "lib/net9.0/System.Text.Encoding.CodePages.xml",
+        "lib/netstandard2.0/System.Text.Encoding.CodePages.dll",
+        "lib/netstandard2.0/System.Text.Encoding.CodePages.xml",
+        "lib/xamarinios10/_._",
+        "lib/xamarinmac20/_._",
+        "lib/xamarintvos10/_._",
+        "lib/xamarinwatchos10/_._",
+        "runtimes/win/lib/net8.0/System.Text.Encoding.CodePages.dll",
+        "runtimes/win/lib/net8.0/System.Text.Encoding.CodePages.xml",
+        "runtimes/win/lib/net9.0/System.Text.Encoding.CodePages.dll",
+        "runtimes/win/lib/net9.0/System.Text.Encoding.CodePages.xml",
+        "system.text.encoding.codepages.9.0.5.nupkg.sha512",
+        "system.text.encoding.codepages.nuspec",
+        "useSharedDesignerContext.txt"
+      ]
+    },
     "System.Text.Encodings.Web/9.0.2": {
       "sha512": "/kCGdrXg0PXrvkHYyHubXJHcmCAvJrxTZ7g4XS6UCxY1JW79aMjtUW6UYNECHJmiyFZsZ/vUuWOM4CtNpiNt8Q==",
       "type": "package",
@@ -3886,7 +4070,8 @@
   },
   "projectFileDependencyGroups": {
     "net8.0": [
-      "ClickHouse.Driver >= 0.7.20"
+      "ClickHouse.Driver >= 0.7.20",
+      "SharpPcap >= 6.3.1"
     ]
   },
   "packageFolders": {
@@ -3934,6 +4119,10 @@
           "ClickHouse.Driver": {
             "target": "Package",
             "version": "[0.7.20, )"
+          },
+          "SharpPcap": {
+            "target": "Package",
+            "version": "[6.3.1, )"
           }
         },
         "imports": [

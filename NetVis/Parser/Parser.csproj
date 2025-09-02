@@ -9,6 +9,7 @@
 
     <ItemGroup>
       <PackageReference Include="ClickHouse.Driver" Version="0.7.20" />
+      <PackageReference Include="SharpPcap" Version="6.3.1" />
     </ItemGroup>
 
 </Project>
