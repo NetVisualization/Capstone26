@@ -1,10 +1,10 @@
 {
   "version": 2,
-  "dgSpecHash": "i6gCqAueBeI=",
+  "dgSpecHash": "X0AQV8MlUTM=",
   "success": true,
   "projectFilePath": "/Users/tomishamilton/development/usafa/capstone/Capstone26/NetVis/Parser/Parser.csproj",
   "expectedPackageFiles": [
-    "/Users/tomishamilton/.nuget/packages/clickhouse.driver/0.7.20/clickhouse.driver.0.7.20.nupkg.sha512",
+    "/Users/tomishamilton/.nuget/packages/clickhouse.client/7.14.0/clickhouse.client.7.14.0.nupkg.sha512",
     "/Users/tomishamilton/.nuget/packages/microsoft.extensions.configuration/8.0.0/microsoft.extensions.configuration.8.0.0.nupkg.sha512",
     "/Users/tomishamilton/.nuget/packages/microsoft.extensions.configuration.abstractions/8.0.0/microsoft.extensions.configuration.abstractions.8.0.0.nupkg.sha512",
     "/Users/tomishamilton/.nuget/packages/microsoft.extensions.configuration.binder/8.0.0/microsoft.extensions.configuration.binder.8.0.0.nupkg.sha512",

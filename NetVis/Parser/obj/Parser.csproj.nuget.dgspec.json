@@ -43,9 +43,13 @@
         "net8.0": {
           "targetAlias": "net8.0",
           "dependencies": {
-            "ClickHouse.Driver": {
+            "ClickHouse.Client": {
               "target": "Package",
-              "version": "[0.7.20, )"
+              "version": "[7.14.0, )"
+            },
+            "PacketDotNet": {
+              "target": "Package",
+              "version": "[1.4.8, )"
             },
             "SharpPcap": {
               "target": "Package",

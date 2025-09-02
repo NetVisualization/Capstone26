@@ -2,7 +2,7 @@
   "version": 3,
   "targets": {
     "net8.0": {
-      "ClickHouse.Driver/0.7.20": {
+      "ClickHouse.Client/7.14.0": {
         "type": "package",
         "dependencies": {
           "Microsoft.Extensions.Http": "8.0.1",
@@ -12,10 +12,10 @@
           "System.Text.Json": "9.0.2"
         },
         "compile": {
-          "lib/net8.0/ClickHouse.Driver.dll": {}
+          "lib/net8.0/ClickHouse.Client.dll": {}
         },
         "runtime": {
-          "lib/net8.0/ClickHouse.Driver.dll": {}
+          "lib/net8.0/ClickHouse.Client.dll": {}
         }
       },
       "Microsoft.Extensions.Configuration/8.0.0": {
@@ -1243,23 +1243,21 @@
     }
   },
   "libraries": {
-    "ClickHouse.Driver/0.7.20": {
-      "sha512": "03r5UcDNVhzw2ujTfeqle8WeztCm3KD69QiiX/Cc51A0Z26fqqACdTN+Q6/lYxoo3v4uQQEe4co5vikLfQ/4AA==",
+    "ClickHouse.Client/7.14.0": {
+      "sha512": "7nrNoLppjM+2qNQP71oIeo3y6yhNgowg+lGZjk1x0XLcYs4R7maWTiAktlbmCtGZk/gqa4G0GXysVQzxIJdQaQ==",
       "type": "package",
-      "path": "clickhouse.driver/0.7.20",
+      "path": "clickhouse.client/7.14.0",
       "files": [
         ".nupkg.metadata",
         ".signature.p7s",
         "README.md",
-        "clickhouse.driver.0.7.20.nupkg.sha512",
-        "clickhouse.driver.nuspec",
-        "icon.png",
-        "lib/net462/ClickHouse.Driver.dll",
-        "lib/net48/ClickHouse.Driver.dll",
-        "lib/net6.0/ClickHouse.Driver.dll",
-        "lib/net8.0/ClickHouse.Driver.dll",
-        "lib/net9.0/ClickHouse.Driver.dll",
-        "lib/netstandard2.1/ClickHouse.Driver.dll"
+        "clickhouse.client.7.14.0.nupkg.sha512",
+        "clickhouse.client.nuspec",
+        "lib/net462/ClickHouse.Client.dll",
+        "lib/net48/ClickHouse.Client.dll",
+        "lib/net6.0/ClickHouse.Client.dll",
+        "lib/net8.0/ClickHouse.Client.dll",
+        "lib/netstandard2.1/ClickHouse.Client.dll"
       ]
     },
     "Microsoft.Extensions.Configuration/8.0.0": {
@@ -4070,7 +4068,8 @@
   },
   "projectFileDependencyGroups": {
     "net8.0": [
-      "ClickHouse.Driver >= 0.7.20",
+      "ClickHouse.Client >= 7.14.0",
+      "PacketDotNet >= 1.4.8",
       "SharpPcap >= 6.3.1"
     ]
   },
@@ -4116,9 +4115,13 @@
       "net8.0": {
         "targetAlias": "net8.0",
         "dependencies": {
-          "ClickHouse.Driver": {
+          "ClickHouse.Client": {
             "target": "Package",
-            "version": "[0.7.20, )"
+            "version": "[7.14.0, )"
+          },
+          "PacketDotNet": {
+            "target": "Package",
+            "version": "[1.4.8, )"
           },
           "SharpPcap": {
             "target": "Package",
