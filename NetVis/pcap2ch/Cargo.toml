@@ -1,0 +1,15 @@
+[package]
+name = "pcap2ch"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1.0.99"
+chrono = {version = "0.4.41", features = ["clock", "serde"]}
+clap = {version = "4.5.45", features = ["derive", "env"]}
+clickhouse = {version = "0.13.3", default-features = false, features = ["lz4", "chrono"]}
+etherparse = "0.19.0"
+futures = "0.3.31"
+pcap = "2.3.0"
+serde = {version = "1.0.219", features = ["derive"]}
+tokio = {version = "1.47.1", features = ["full"]}

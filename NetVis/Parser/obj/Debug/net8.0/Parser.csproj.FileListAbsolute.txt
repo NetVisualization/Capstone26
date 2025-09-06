@@ -13,7 +13,6 @@
 /Users/tomishamilton/development/usafa/capstone/Capstone26/NetVis/Parser/obj/Debug/net8.0/Parser.pdb
 /Users/tomishamilton/development/usafa/capstone/Capstone26/NetVis/Parser/obj/Debug/net8.0/Parser.genruntimeconfig.cache
 /Users/tomishamilton/development/usafa/capstone/Capstone26/NetVis/Parser/obj/Debug/net8.0/ref/Parser.dll
-/Users/tomishamilton/development/usafa/capstone/Capstone26/NetVis/Parser/bin/Debug/net8.0/ClickHouse.Driver.dll
 /Users/tomishamilton/development/usafa/capstone/Capstone26/NetVis/Parser/bin/Debug/net8.0/Microsoft.Extensions.Configuration.dll
 /Users/tomishamilton/development/usafa/capstone/Capstone26/NetVis/Parser/bin/Debug/net8.0/Microsoft.Extensions.Configuration.Abstractions.dll
 /Users/tomishamilton/development/usafa/capstone/Capstone26/NetVis/Parser/bin/Debug/net8.0/Microsoft.Extensions.Configuration.Binder.dll
@@ -35,3 +34,8 @@
 /Users/tomishamilton/development/usafa/capstone/Capstone26/NetVis/Parser/bin/Debug/net8.0/runtimes/browser/lib/net8.0/System.Text.Encodings.Web.dll
 /Users/tomishamilton/development/usafa/capstone/Capstone26/NetVis/Parser/obj/Debug/net8.0/Parser.csproj.AssemblyReference.cache
 /Users/tomishamilton/development/usafa/capstone/Capstone26/NetVis/Parser/obj/Debug/net8.0/Parser.csproj.Up2Date
+/Users/tomishamilton/development/usafa/capstone/Capstone26/NetVis/Parser/bin/Debug/net8.0/ClickHouse.Client.dll
+/Users/tomishamilton/development/usafa/capstone/Capstone26/NetVis/Parser/bin/Debug/net8.0/PacketDotNet.dll
+/Users/tomishamilton/development/usafa/capstone/Capstone26/NetVis/Parser/bin/Debug/net8.0/SharpPcap.dll
+/Users/tomishamilton/development/usafa/capstone/Capstone26/NetVis/Parser/bin/Debug/net8.0/System.Text.Encoding.CodePages.dll
+/Users/tomishamilton/development/usafa/capstone/Capstone26/NetVis/Parser/bin/Debug/net8.0/runtimes/win/lib/net8.0/System.Text.Encoding.CodePages.dll
