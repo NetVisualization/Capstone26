@@ -1,11 +1,15 @@
 CREATE DATABASE IF NOT EXISTS net;
 
+DROP TABLE IF EXISTS net.packets;
+
 -- Essential packet facts for nodes/edges
 CREATE TABLE net.packets
 (
     ts         DateTime64(6, 'UTC'),
     src_ip     IPv6,
     dst_ip     IPv6,
+    src_mac    FixedString(6),
+    dst_mac    FixedString(6),
     l4_proto   Enum16('NONE' = 0, 'ICMP' = 1, 'TCP' = 6, 'UDP' = 17, 'SCTP' = 132),
     src_port   Nullable(UInt16),
     dst_port   Nullable(UInt16),

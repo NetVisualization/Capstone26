@@ -19,6 +19,7 @@ CREATE TABLE net.nodes_state
     first_seen_state       AggregateFunction(min, DateTime64(6, 'UTC')),
     last_seen_state        AggregateFunction(max, DateTime64(6, 'UTC')),
     num_unique_peers_state AggregateFunction(uniqCombined, IPv6),
+    macs_state             AggregateFunction(groupUniqArray, FixedString(6)),
 
     device_type LowCardinality(Nullable(String)) DEFAULT NULL
 )
@@ -37,6 +38,7 @@ SELECT
     minMergeState(first_seen_state)     AS first_seen_state,
     maxMergeState(last_seen_state)      AS last_seen_state,
     uniqCombinedState(node_b)           AS num_unique_peers_state,
+    groupUniqArrayMergeState(node_a_macs_state) AS macs_state,
     CAST(NULL AS Nullable(String))      AS device_type
 FROM net.connections_state
 GROUP BY ip
@@ -51,6 +53,7 @@ SELECT
     minMergeState(first_seen_state),
     maxMergeState(last_seen_state),
     uniqCombinedState(node_a),
+    groupUniqArrayMergeState(node_b_macs_state) AS macs_state,
     CAST(NULL AS Nullable(String))      AS device_type
 FROM net.connections_state
 GROUP BY ip;
@@ -66,6 +69,7 @@ SELECT
     minState(ts)                    AS first_seen_state,
     maxState(ts)                    AS last_seen_state,
     uniqCombinedState(dst_ip)       AS num_unique_peers_state,
+    groupUniqArrayState(src_mac)          AS macs_state,
     CAST(NULL AS Nullable(String))  AS device_type
 FROM net.packets
 GROUP BY ip
@@ -78,6 +82,7 @@ SELECT
     minState(ts),
     maxState(ts),
     uniqCombinedState(src_ip),
+    groupUniqArrayState(dst_mac)          AS macs_state,
     CAST(NULL AS Nullable(String))  AS device_type
 FROM net.packets
 GROUP BY ip;
@@ -91,6 +96,7 @@ SELECT
     minMerge(first_seen_state)                   AS first_seen,
     maxMerge(last_seen_state)                    AS last_seen,
     uniqCombinedMerge(num_unique_peers_state)    AS degree,
+    arrayDistinct( arrayMap(m -> lower(hex(m)), groupUniqArrayMerge(macs_state)) ) AS macs,
     device_type
 FROM net.nodes_state
 GROUP BY ip, device_type;
