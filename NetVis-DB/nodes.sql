@@ -1,97 +1,73 @@
--- Finalized nodes view over a state table (MACs stored as hex strings)
+-- MAC-centric nodes
 
 CREATE DATABASE IF NOT EXISTS net;
 
+-- Drop old IP-centric nodes pipeline
 DROP VIEW  IF EXISTS net.nodes;
 DROP TABLE IF EXISTS net.nodes_state;
 DROP VIEW  IF EXISTS net.mv_connections_to_nodes;
 DROP VIEW  IF EXISTS net.mv_packets_to_nodes;
 
+-- New MAC-centric state
 CREATE TABLE net.nodes_state
 (
-    ip IPv6,
+    mac FixedString(12),
 
     num_packets_state      AggregateFunction(count),
     num_bytes_state        AggregateFunction(sum, UInt64),
     first_seen_state       AggregateFunction(min, DateTime64(6, 'UTC')),
     last_seen_state        AggregateFunction(max, DateTime64(6, 'UTC')),
-    num_unique_peers_state AggregateFunction(uniqCombined, IPv6),
 
-    -- MACs aggregated as hex strings
-    macs_state             AggregateFunction(groupUniqArray, FixedString(12)),
+    -- unique peer MACs for degree
+    peers_state            AggregateFunction(uniqCombined, FixedString(12)),
+
+    -- all IPs observed on this MAC (IPv6, IPv4 is ::ffff:a.b.c.d)
+    ips_state              AggregateFunction(groupUniqArray, IPv6),
 
     device_type LowCardinality(Nullable(String)) DEFAULT NULL
 )
     ENGINE = AggregatingMergeTree
-        ORDER BY (ip);
+        ORDER BY (mac);
 
--- from connections_state (faster rebuilds)
-CREATE MATERIALIZED VIEW net.mv_connections_to_nodes
-            TO net.nodes_state
-AS
-SELECT
-    node_a AS ip,
-    countMergeState(num_packets_state)     AS num_packets_state,
-    sumMergeState(num_bytes_state)         AS num_bytes_state,
-    minMergeState(first_seen_state)        AS first_seen_state,
-    maxMergeState(last_seen_state)         AS last_seen_state,
-    uniqCombinedState(node_b)              AS num_unique_peers_state,
-    groupUniqArrayMergeState(node_a_macs_state) AS macs_state,
-    CAST(NULL AS Nullable(String))         AS device_type
-FROM net.connections_state
-GROUP BY ip
-
-UNION ALL
-SELECT
-    node_b AS ip,
-    countMergeState(num_packets_state),
-    sumMergeState(num_bytes_state),
-    minMergeState(first_seen_state),
-    maxMergeState(last_seen_state),
-    uniqCombinedState(node_a),
-    groupUniqArrayMergeState(node_b_macs_state) AS macs_state,
-    CAST(NULL AS Nullable(String))              AS device_type
-FROM net.connections_state
-GROUP BY ip;
-
--- safety: direct from packets (if connections lags)
+-- Build MAC nodes directly from packets (two branches, src and dst)
 CREATE MATERIALIZED VIEW net.mv_packets_to_nodes
             TO net.nodes_state
 AS
 SELECT
-    src_ip AS ip,
-    countState()                      AS num_packets_state,
-    sumState(toUInt64(packet_len))    AS num_bytes_state,
-    minState(ts)                      AS first_seen_state,
-    maxState(ts)                      AS last_seen_state,
-    uniqCombinedState(dst_ip)         AS num_unique_peers_state,
-    groupUniqArrayState(src_mac)      AS macs_state,
-    CAST(NULL AS Nullable(String))    AS device_type
+    src_mac                                       AS mac,
+    countState()                                  AS num_packets_state,
+    sumState(toUInt64(packet_len))                AS num_bytes_state,
+    minState(ts)                                  AS first_seen_state,
+    maxState(ts)                                  AS last_seen_state,
+    uniqCombinedState(dst_mac)                    AS peers_state,
+    groupUniqArrayState(src_ip)                   AS ips_state,
+    CAST(NULL AS Nullable(String))                AS device_type
 FROM net.packets
-GROUP BY ip
+GROUP BY mac
 
 UNION ALL
 SELECT
-    dst_ip AS ip,
+    dst_mac                                       AS mac,
     countState(),
     sumState(toUInt64(packet_len)),
     minState(ts),
     maxState(ts),
-    uniqCombinedState(src_ip),
-    groupUniqArrayState(dst_mac)      AS macs_state,
-    CAST(NULL AS Nullable(String))    AS device_type
+    uniqCombinedState(src_mac),
+    groupUniqArrayState(dst_ip),
+    CAST(NULL AS Nullable(String))                AS device_type
 FROM net.packets
-GROUP BY ip;
+GROUP BY mac;
 
+-- Final MAC-centric nodes view
 CREATE OR REPLACE VIEW net.nodes AS
 SELECT
-    ip,
-    countMerge(num_packets_state)                AS pkts,
-    sumMerge(num_bytes_state)                    AS bytes,
-    minMerge(first_seen_state)                   AS first_seen,
-    maxMerge(last_seen_state)                    AS last_seen,
-    uniqCombinedMerge(num_unique_peers_state)    AS degree,
-    arraySort(arrayDistinct(groupUniqArrayMerge(macs_state))) AS macs,
+    mac,
+    countMerge(num_packets_state)                              AS pkts,
+    sumMerge(num_bytes_state)                                  AS bytes,
+    minMerge(first_seen_state)                                 AS first_seen,
+    maxMerge(last_seen_state)                                  AS last_seen,
+    uniqCombinedMerge(peers_state)                             AS degree,
+    arraySort(arrayDistinct(groupUniqArrayMerge(ips_state)))   AS ips,
     device_type
 FROM net.nodes_state
-GROUP BY ip, device_type;
+GROUP BY mac, device_type;
