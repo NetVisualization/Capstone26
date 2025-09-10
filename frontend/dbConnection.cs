@@ -7,12 +7,14 @@ using ClickHouse.Client.ADO;
 using ClickHouse.Client.ADO.Parameters;
 using ClickHouse.Client.Utility;
 using ClickHouse.Client.Copy; 
-using TMPro;
-using Newtonsoft.Json;
+// using TMPro;
+// using Newtonsoft.Json;
+using DotNext.Diagnostics;
+using System.Threading.Tasks;
+using System.Data.Common;
 
 public class DBConnection : MonoBehaviour
 {
-
     public enum l2_proto : byte
     {
         ETHERNET = 1,
@@ -43,11 +45,11 @@ public class DBConnection : MonoBehaviour
 
     // Database Node Object (Get)
     [Serializable]
-    struct Node
+    public struct Node
     {
         public int _id;
-        public NetworkInformation.PhysicalAddress MACaddr;
-        public IPAddress IPaddr;
+        public System.Net.NetworkInformation.PhysicalAddress MACaddr;
+        public System.Net.IPAddress IPaddr;
         public string DeviceType;
         public int NumConnections;
         public int NumPackets;
@@ -55,7 +57,7 @@ public class DBConnection : MonoBehaviour
 
     // Database Connection Object (Get)
     [Serializable]
-    struct Connection
+    public struct Connection
     {
         public int _id;
         public IPAddress NodeA_IP;
@@ -66,14 +68,14 @@ public class DBConnection : MonoBehaviour
 
     // Database Packet Object (Get)
     [Serializable]
-    struct Packet
+    public struct Packet
     {
         public int _id;
         public DateTime Timestamp;
-        public NetworkInformation.PhysicalAddress SourceMAC;
-        public NetworkInformation.PhysicalAddress DestinationMAC;
-        public IPAddress SourceIP;
-        public IPAddress DestinationIP;
+        public System.Net.NetworkInformation.PhysicalAddress SourceMAC;
+        public System.Net.NetworkInformation.PhysicalAddress DestinationMAC;
+        public System.Net.IPAddress SourceIP;
+        public System.Net.IPAddress DestinationIP;
         public short SourcePort;
         public short DestinationPort;
         public string Protocol;
@@ -83,7 +85,7 @@ public class DBConnection : MonoBehaviour
 
     private ClickHouse.Client.ADO.ClickHouseConnection? _connection;
 
-    NodeSpawnerScript nodeSpawnerScript;
+    // NodeSpawnerScript nodeSpawnerScript;
     public GameObject nodeSpawner;
 
     public Node[] nodes;
@@ -93,7 +95,7 @@ public class DBConnection : MonoBehaviour
     public void connect(string host, string port, string dbName, string user, string pass)
     {
         // clickhouse connection info
-        string connectionString = $"Host={host};Database={dbName};port={port};Username={user};Password={pass}";
+        string connectionString = $"Host={host};Database={dbName};Port={port};Username={user};Password={pass}";
         _connection = new ClickHouse.Client.ADO.ClickHouseConnection(connectionString);
         _connection.Open();
     }
@@ -128,90 +130,95 @@ public class DBConnection : MonoBehaviour
         }
     }
 
-        /// <summary>
-        /// Get the total number of nodes in the database.
-        /// </summary>
-        public int getNodeCount()
-        {
-            return 0;
-        }
-
-        /// <summary>
-        /// Get the total number of connections in the database.
-        /// </summary>
-        public int getConnectionCount()
-        {
-            return 0;
-        }
-
-        /// <summary>
-        /// Get a node by its index in the DB.
-        /// </summary>
-        public void GetNode(int nodeId)
-        {
-            return;
-        }
-
-        /// <summary>
-        /// Get a connection by its index in the DB.
-        /// </summary>
-        public void GetConnection(int connectionId)
-        {
-            return;
-        }
-
-    void Awake()
+    /// <summary>
+    /// Get the total number of nodes in the database.
+    /// </summary>
+    public int getNodeCount()
     {
-        nodeSpawnerScript = nodeSpawner.GetComponent<NodeSpawnerScript>();
+        var result = this.ExecuteCommand("SELECT COUNT(*) FROM nodes;").Result;
+        return Convert.ToInt32(result);
+    }
 
-        var settings = MongoClientSettings.FromConnectionString(connectionUri);
+    /// <summary>
+    /// Get the total number of connections in the database.
+    /// </summary>
+    public int getConnectionCount()
+    {
+        var result = this.ExecuteCommand("SELECT COUNT(*) FROM connections").Result;
+        return Convert.ToInt32(result);
+    }
 
-        // Set the ServerApi field of the settings object to set the version of the Stable API on the client
-        settings.ServerApi = new ServerApi(ServerApiVersion.V1);
+    /// <summary>
+    /// Get all nodes that have not yet been rendered
+    /// timestamp lastFrame:
+    /// </summary>
+    public void GetNodesSince(Timestamp lastFrame)
+    {
+
+        string CommandText = "SELECT * FROM node WHERE last_updated > @lastFrame";
+        var result = ExecuteCommand(CommandText);
+    }
+
+    /// <summary>
+    /// Get a connection by its index in the DB.
+    /// </summary>
+    public void GetConnection(int connectionId)
+    {
+        return;
+    }
+
+    // void Awake()
+    // {
+    //     nodeSpawnerScript = nodeSpawner.GetComponent<NodeSpawnerScript>();
+
+    //     var settings = MongoClientSettings.FromConnectionString(connectionUri);
+
+    //     // Set the ServerApi field of the settings object to set the version of the Stable API on the client
+    //     settings.ServerApi = new ServerApi(ServerApiVersion.V1);
         
-        // Create a new client and connect to the server
-        client = new MongoClient(settings);
-    }
+    //     // Create a new client and connect to the server
+    //     client = new MongoClient(settings);
+    // }
 
-    public void RequestNodes()
-    {
-        IMongoCollection<BsonDocument> collection = client.GetDatabase("NetworkVisualization").GetCollection<BsonDocument>("Nodes");
-        var filter = Builders<BsonDocument>.Filter.Empty;
-        IFindFluent<BsonDocument, BsonDocument> document = collection.Find(filter);
+    // public void RequestNodes()
+    // {
+    //     IMongoCollection<BsonDocument> collection = client.GetDatabase("NetworkVisualization").GetCollection<BsonDocument>("Nodes");
+    //     var filter = Builders<BsonDocument>.Filter.Empty;
+    //     IFindFluent<BsonDocument, BsonDocument> document = collection.Find(filter);
 
-        foreach(BsonDocument doc in document.ToList())
-        {
-            string json = doc.ToJson();
+    //     foreach(BsonDocument doc in document.ToList())
+    //     {
+    //         string json = doc.ToJson();
 
-            nodes.Add(JsonConvert.DeserializeObject<Node>(json));
-        }
-    }
+    //         nodes.Add(JsonConvert.DeserializeObject<Node>(json));
+    //     }
+    // }
 
-    public void RequestConnections()
-    {
-        IMongoCollection<BsonDocument> collection = client.GetDatabase("NetworkVisualization").GetCollection<BsonDocument>("Connections");
-        var filter = Builders<BsonDocument>.Filter.Empty;
-        IFindFluent<BsonDocument, BsonDocument> document = collection.Find(filter);
+    // public void RequestConnections()
+    // {
+    //     IMongoCollection<BsonDocument> collection = client.GetDatabase("NetworkVisualization").GetCollection<BsonDocument>("Connections");
+    //     var filter = Builders<BsonDocument>.Filter.Empty;
+    //     IFindFluent<BsonDocument, BsonDocument> document = collection.Find(filter);
 
-        foreach (BsonDocument doc in document.ToList())
-        {
-            string json = doc.ToJson();
+    //     foreach (BsonDocument doc in document.ToList())
+    //     {
+    //         string json = doc.ToJson();
 
-            connections.Add(JsonConvert.DeserializeObject<Connection>(json));
-        }
-    }
+    //         connections.Add(JsonConvert.DeserializeObject<Connection>(json));
+    //     }
+    // }
 
-    public void RequestPackets()
-    {
-        IMongoCollection<BsonDocument> collection = client.GetDatabase("NetworkVisualization").GetCollection<BsonDocument>("Packets");
-        var filter = Builders<BsonDocument>.Filter.Empty;
-        IFindFluent<BsonDocument, BsonDocument> document = collection.Find(filter);
+    // public void RequestPackets()
+    // {
+    //     IMongoCollection<BsonDocument> collection = client.GetDatabase("NetworkVisualization").GetCollection<BsonDocument>("Packets");
+    //     var filter = Builders<BsonDocument>.Filter.Empty;
+    //     IFindFluent<BsonDocument, BsonDocument> document = collection.Find(filter);
 
-        foreach (BsonDocument doc in document.ToList())
-        {
-            string json = doc.ToJson();
+    //     foreach (BsonDocument doc in document.ToList())
+    //     {
+    //         string json = doc.ToJson();
 
-            packets.Add(JsonConvert.DeserializeObject<Packet>(json));
-        }
-    }
+    //         packets.Add(JsonConvert.DeserializeObject<Packet>(json));
+    //     }
+    // }
 }
