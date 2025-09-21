@@ -1,273 +1,276 @@
 use anyhow::{Context, Result};
-use chrono::{DateTime, TimeZone, Utc};
+use chrono::{DateTime, Utc};
 use clap::Parser;
-use clickhouse; // uses the HTTP client
-use etherparse::{InternetSlice, LinkSlice, SlicedPacket, TransportSlice};
+use clickhouse::{Client, Row};
+use etherparse::{LinkSlice, NetSlice, SlicedPacket, TransportSlice};
 use pcap::Capture;
-use std::fmt::Write as _;
-use std::net::Ipv6Addr;
+use serde::Serialize;
+use std::net::{Ipv4Addr, Ipv6Addr};
 
-#[derive(Debug, Parser)]
+#[derive(Parser, Debug)]
 #[command(
-    name = "pcap2ch",
-    about = "pcap -> ClickHouse ingestor for net.packets"
+    author,
+    version,
+    about = "Parse a PCAP and stream packets into ClickHouse (net.packets)"
 )]
 struct Args {
-    /// ClickHouse HTTP(S) URL, e.g. http://host:8123 or https://host:8443
-    #[arg(long, env = "CH_DSN")]
-    dsn: String,
-    /// Database (must contain the target table)
-    #[arg(long, default_value = "net")]
-    database: String,
-    /// Target table name (in the database above)
-    #[arg(long, default_value = "packets")]
-    table: String,
-    /// Batch size (rows per INSERT)
-    #[arg(long, default_value_t = 5000)]
+    /// Path to input PCAP
+    #[arg(long, short = 'f', env = "PCAP_FILE")]
+    pcap: String,
+
+    /// ClickHouse HTTP endpoint (e.g., http://localhost:8123)
+    #[arg(long, env = "CH_URL", default_value = "http://localhost:8123")]
+    ch_url: String,
+
+    /// ClickHouse database name
+    #[arg(long, env = "CH_DB", default_value = "net")]
+    ch_db: String,
+
+    /// Batch size (rows per HTTP chunk)
+    #[arg(long, default_value_t = 10_000)]
     batch: usize,
-    /// Optional username/password (if not embedded in DSN)
+
+    /// Optional ClickHouse user
     #[arg(long, env = "CH_USER")]
-    user: Option<String>,
+    ch_user: Option<String>,
+
+    /// Optional ClickHouse password
     #[arg(long, env = "CH_PASSWORD")]
-    password: Option<String>,
-    /// One or more PCAP/PCAPNG files to ingest
-    files: Vec<String>,
+    ch_password: Option<String>,
 }
 
-#[derive(Clone)]
-struct RowBuf {
+#[derive(Debug, Clone, Copy)]
+enum L4 {
+    None = 0,
+    Icmp = 1,
+    Tcp = 6,
+    Udp = 17,
+    Sctp = 132,
+}
+
+#[derive(Debug, Clone, Copy)]
+enum L7 {
+    UNKNOWN = 0,
+    HTTP = 80,
+    TLS = 443,
+    DNS = 53,
+    MDNS = 5353,
+    SSDP = 1900,
+    DHCP = 67,
+    NTP = 123,
+    SSH = 22,
+    SMTP = 25,
+    IMAP = 143,
+    POP3 = 110,
+    QUIC = 1000,
+    SMB = 445,
+    RDP = 3389,
+}
+
+#[derive(Row, Serialize, Debug)]
+struct PacketRow {
     ts: DateTime<Utc>,
     src_ip: Ipv6Addr,
     dst_ip: Ipv6Addr,
-    src_mac: [u8; 6],
-    dst_mac: [u8; 6],
-    l4_proto: i16,
+    src_mac: Vec<u8>,
+    dst_mac: Vec<u8>,
+    l4_proto: i16, // Enum16 -> i16
+    l7_proto: i16, // Enum16 -> i16
     src_port: Option<u16>,
     dst_port: Option<u16>,
     packet_len: u32,
+    raw: Vec<u8>, // full captured bytes
 }
 
 #[tokio::main]
 async fn main() -> Result<()> {
     let args = Args::parse();
-    if args.files.is_empty() {
-        anyhow::bail!("Provide at least one pcap: pcap2ch --dsn http://host:8123 ./capture.pcap");
-    }
 
-    // Build CH client
-    let mut client = clickhouse::Client::default()
-        .with_url(&args.dsn)
-        .with_database(&args.database);
-    if let Some(u) = &args.user {
+    let mut client = Client::default()
+        .with_url(&args.ch_url)
+        .with_database(&args.ch_db);
+    if let Some(u) = &args.ch_user {
         client = client.with_user(u);
     }
-    if let Some(p) = &args.password {
+    if let Some(p) = &args.ch_password {
         client = client.with_password(p);
     }
 
-    // Preflight: ensure table exists
-    let exists_sql = format!("EXISTS TABLE {}.{}", args.database, args.table);
-    let exists: u8 = client
-        .query(&exists_sql)
-        .fetch_one()
-        .await
-        .with_context(|| format!("Preflight failed: {}", exists_sql))?;
-    if exists == 0 {
-        anyhow::bail!("Table does not exist: {}.{}", args.database, args.table);
-    }
+    // Long-lived inserter (good for streaming / live later)
+    let mut inserter = client.insert("net.packets")?; // NOTE: not async
 
-    let mut buf: Vec<RowBuf> = Vec::with_capacity(args.batch);
-    let mut total: usize = 0;
+    let mut cap =
+        Capture::from_file(&args.pcap).with_context(|| format!("opening pcap {}", args.pcap))?;
 
-    for path in &args.files {
-        ingest_file(path, &mut buf).with_context(|| format!("ingesting {}", path))?;
+    let mut batch_count: usize = 0;
 
-        // flush in batches
-        while buf.len() >= args.batch {
-            let batch: Vec<RowBuf> = buf.drain(..args.batch).collect();
-            insert_batch(&client, &args.database, &args.table, &batch).await?;
-            total += batch.len();
+    loop {
+        match cap.next_packet() {
+            Ok(pkt) => {
+                let ts =
+                    pcap_ts_to_dt64us(pkt.header.ts.tv_sec as i64, pkt.header.ts.tv_usec as u32);
+                let raw = pkt.data.to_vec();
+                let packet_len = pkt.header.len;
+
+                // defaults
+                let mut src_mac = vec![0u8; 6];
+                let mut dst_mac = vec![0u8; 6];
+                let mut src_ip = Ipv6Addr::UNSPECIFIED;
+                let mut dst_ip = Ipv6Addr::UNSPECIFIED;
+                let mut l4_proto = L4::None as i16;
+                let mut l7_proto = L7::UNKNOWN as i16;
+                let mut src_port: Option<u16> = None;
+                let mut dst_port: Option<u16> = None;
+
+                // parse (Ethernet expected; unknown link types => defaults)
+                if let Ok(sp) = SlicedPacket::from_ethernet(&raw) {
+                    if let Some(LinkSlice::Ethernet2(eth)) = sp.link {
+                        dst_mac.copy_from_slice(&eth.destination());
+                        src_mac.copy_from_slice(&eth.source());
+                    }
+
+                    match sp.net {
+                        Some(NetSlice::Ipv4(ip4)) => {
+                            let s4 = Ipv4Addr::from(ip4.header().source());
+                            let d4 = Ipv4Addr::from(ip4.header().destination());
+                            src_ip = s4.to_ipv6_mapped();
+                            dst_ip = d4.to_ipv6_mapped();
+
+                            match sp.transport {
+                                Some(TransportSlice::Tcp(tcp)) => {
+                                    l4_proto = L4::Tcp as i16;
+                                    src_port = Some(tcp.source_port());
+                                    dst_port = Some(tcp.destination_port());
+                                    l7_proto = detect_l7_tcp(src_port, dst_port) as i16; // port-only
+                                }
+                                Some(TransportSlice::Udp(udp)) => {
+                                    l4_proto = L4::Udp as i16;
+                                    src_port = Some(udp.source_port());
+                                    dst_port = Some(udp.destination_port());
+                                    l7_proto = detect_l7_udp(src_port, dst_port) as i16; // port-only
+                                }
+                                Some(TransportSlice::Icmpv4(_)) => {
+                                    l4_proto = L4::Icmp as i16;
+                                }
+                                _ => {}
+                            }
+                        }
+                        Some(NetSlice::Ipv6(ip6)) => {
+                            src_ip = Ipv6Addr::from(ip6.header().source());
+                            dst_ip = Ipv6Addr::from(ip6.header().destination());
+
+                            match sp.transport {
+                                Some(TransportSlice::Tcp(tcp)) => {
+                                    l4_proto = L4::Tcp as i16;
+                                    src_port = Some(tcp.source_port());
+                                    dst_port = Some(tcp.destination_port());
+                                    l7_proto = detect_l7_tcp(src_port, dst_port) as i16; // port-only
+                                }
+                                Some(TransportSlice::Udp(udp)) => {
+                                    l4_proto = L4::Udp as i16;
+                                    src_port = Some(udp.source_port());
+                                    dst_port = Some(udp.destination_port());
+                                    l7_proto = detect_l7_udp(src_port, dst_port) as i16; // port-only
+                                }
+                                Some(TransportSlice::Icmpv6(_)) => {
+                                    l4_proto = L4::Icmp as i16;
+                                }
+                                _ => {}
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+
+                let row = PacketRow {
+                    ts,
+                    src_ip,
+                    dst_ip,
+                    src_mac,
+                    dst_mac,
+                    l4_proto,
+                    l7_proto,
+                    src_port,
+                    dst_port,
+                    packet_len,
+                    raw,
+                };
+
+                inserter.write(&row).await?;
+                batch_count += 1;
+
+                if batch_count >= args.batch {
+                    inserter.end().await?; // finish this chunk
+                    inserter = client.insert("net.packets")?; // start next chunk
+                    batch_count = 0;
+                }
+            }
+            Err(pcap::Error::NoMorePackets) => break,
+            Err(e) => return Err(e).context("reading packet"),
         }
     }
 
-    if !buf.is_empty() {
-        insert_batch(&client, &args.database, &args.table, &buf).await?;
-        total += buf.len();
-    }
-
-    eprintln!(
-        "Inserted {} rows into {}.{}",
-        total, args.database, args.table
-    );
+    // flush remainder
+    inserter.end().await?;
     Ok(())
 }
 
-fn ingest_file(path: &str, out: &mut Vec<RowBuf>) -> Result<()> {
-    let mut cap = Capture::from_file(path).with_context(|| format!("open pcap {}", path))?;
+// ---------- helpers ----------
 
-    while let Ok(pkt) = cap.next_packet() {
-        let ts = Utc
-            .timestamp_opt(
-                pkt.header.ts.tv_sec.into(),
-                (pkt.header.ts.tv_usec as u32) * 1000,
-            )
-            .single()
-            .unwrap_or_else(|| Utc.timestamp_opt(0, 0).unwrap());
-
-        let data = pkt.data;
-        let packet_len = pkt.header.len;
-
-        let sp = match SlicedPacket::from_ethernet(data) {
-            Ok(s) => s,
-            Err(_) => continue,
-        };
-
-        // defaults
-        let mut src_ip = Ipv6Addr::UNSPECIFIED;
-        let mut dst_ip = Ipv6Addr::UNSPECIFIED;
-        let mut src_mac = [0u8; 6];
-        let mut dst_mac = [0u8; 6];
-        let mut src_port: Option<u16> = None;
-        let mut dst_port: Option<u16> = None;
-        let mut l4_code: i16 = 0;
-
-        if let Some(link) = &sp.link {
-            if let LinkSlice::Ethernet2(eth) = link {
-                src_mac.copy_from_slice(&eth.source());
-                dst_mac.copy_from_slice(&eth.destination());
-            }
-        }
-
-        if let Some(net) = &sp.net {
-            match net {
-                InternetSlice::Ipv4(v4) => {
-                    src_ip = v4.header().source_addr().to_ipv6_mapped();
-                    dst_ip = v4.header().destination_addr().to_ipv6_mapped();
-                    l4_code =
-                        map_l4_code(sp.transport.as_ref(), Some(v4.header().protocol().into()));
-                }
-                InternetSlice::Ipv6(v6) => {
-                    src_ip = v6.header().source_addr();
-                    dst_ip = v6.header().destination_addr();
-                    l4_code = map_l4_code(
-                        sp.transport.as_ref(),
-                        Some(v6.header().next_header().into()),
-                    );
-                }
-                _ => {}
-            }
-        }
-
-        match &sp.transport {
-            Some(TransportSlice::Tcp(t)) => {
-                src_port = Some(t.source_port());
-                dst_port = Some(t.destination_port());
-            }
-            Some(TransportSlice::Udp(u)) => {
-                src_port = Some(u.source_port());
-                dst_port = Some(u.destination_port());
-            }
-            _ => {}
-        }
-
-        out.push(RowBuf {
-            ts,
-            src_ip,
-            dst_ip,
-            src_mac,
-            dst_mac,
-            l4_proto: l4_code,
-            src_port,
-            dst_port,
-            packet_len: packet_len as u32,
-        });
-    }
-
-    Ok(())
+// pcap ts: seconds + microseconds -> DateTime64(6)
+fn pcap_ts_to_dt64us(sec: i64, usec: u32) -> DateTime<Utc> {
+    // microseconds -> nanoseconds component
+    let nanos = (usec as u32) * 1_000; // 1e-6 s -> 1e-9 s
+    // chrono 0.4.41: from_timestamp returns Option
+    DateTime::from_timestamp(sec, nanos * 1_000).unwrap_or(DateTime::UNIX_EPOCH)
 }
 
-async fn insert_batch(
-    client: &clickhouse::Client,
-    db: &str,
-    table: &str,
-    rows: &[RowBuf],
-) -> Result<()> {
-    // Named columns; store MACs as 12-char hex strings (no unhex()).
-    let mut sql = String::with_capacity(rows.len() * 190);
-    write!(
-        sql,
-        "INSERT INTO {}.{} (ts, src_ip, dst_ip, src_mac, dst_mac, l4_proto, src_port, dst_port, packet_len) VALUES ",
-        db, table
-    )?;
-
-    for (i, r) in rows.iter().enumerate() {
-        if i > 0 {
-            sql.push(',');
-        }
-
-        // ts -> toDateTime64
-        let ts_str = r.ts.format("%Y-%m-%d %H:%M:%S").to_string();
-        let micros = r.ts.timestamp_subsec_micros();
-
-        // IPs as strings; CH parses with toIPv6()
-        let src_ip_s = r.src_ip.to_string();
-        let dst_ip_s = r.dst_ip.to_string();
-
-        // MACs as lowercase hex strings (length 12)
-        let src_hex = mac_to_hex(&r.src_mac);
-        let dst_hex = mac_to_hex(&r.dst_mac);
-
-        write!(
-            sql,
-            "(toDateTime64('{}.{:06}', 6, 'UTC'), toIPv6('{}'), toIPv6('{}'), '{}', '{}', {}, {}, {}, {})",
-            ts_str,
-            micros,
-            src_ip_s,
-            dst_ip_s,
-            src_hex,
-            dst_hex,
-            r.l4_proto,
-            opt_u16_sql(r.src_port),
-            opt_u16_sql(r.dst_port),
-            r.packet_len
-        )?;
+// Port-only L7 (etherparse 0.19 has no sp.payload on SlicedPacket)
+fn detect_l7_tcp(sp: Option<u16>, dp: Option<u16>) -> L7 {
+    let (sp, dp) = (sp.unwrap_or(0), dp.unwrap_or(0));
+    if sp == 22 || dp == 22 {
+        return L7::SSH;
     }
-
-    client
-        .query(&sql)
-        .execute()
-        .await
-        .with_context(|| "insert batch failed")
+    if sp == 25 || dp == 25 {
+        return L7::SMTP;
+    }
+    if sp == 110 || dp == 110 {
+        return L7::POP3;
+    }
+    if sp == 143 || dp == 143 {
+        return L7::IMAP;
+    }
+    if sp == 445 || dp == 445 {
+        return L7::SMB;
+    }
+    if sp == 3389 || dp == 3389 {
+        return L7::RDP;
+    }
+    if [80, 8080, 8000].contains(&sp) || [80, 8080, 8000].contains(&dp) {
+        return L7::HTTP;
+    }
+    if sp == 443 || dp == 443 {
+        return L7::TLS;
+    }
+    L7::UNKNOWN
 }
 
-fn mac_to_hex(bytes: &[u8; 6]) -> String {
-    let mut s = String::with_capacity(12);
-    for b in bytes {
-        write!(&mut s, "{:02x}", b).unwrap();
+fn detect_l7_udp(sp: Option<u16>, dp: Option<u16>) -> L7 {
+    let (sp, dp) = (sp.unwrap_or(0), dp.unwrap_or(0));
+    if sp == 53 || dp == 53 {
+        return L7::DNS;
     }
-    s
-}
-
-fn opt_u16_sql(v: Option<u16>) -> String {
-    match v {
-        Some(x) => x.to_string(),
-        None => "NULL".to_string(),
+    if sp == 67 || dp == 67 || sp == 68 || dp == 68 {
+        return L7::DHCP;
     }
-}
-
-fn map_l4_code(transport: Option<&TransportSlice>, ip_proto_u8: Option<u8>) -> i16 {
-    if let Some(t) = transport {
-        return match t {
-            TransportSlice::Tcp(_) => 6,
-            TransportSlice::Udp(_) => 17,
-            _ => 0,
-        };
+    if sp == 123 || dp == 123 {
+        return L7::NTP;
     }
-    match ip_proto_u8.unwrap_or(0) {
-        1 => 1,     // ICMP
-        6 => 6,     // TCP
-        17 => 17,   // UDP
-        132 => 132, // SCTP
-        _ => 0,     // NONE
+    if sp == 5353 || dp == 5353 {
+        return L7::MDNS;
     }
+    if sp == 1900 || dp == 1900 {
+        return L7::SSDP;
+    }
+    L7::UNKNOWN
 }
