@@ -7,27 +7,27 @@ using UnityEngine.UI;
 
 public class FilterSystem : MonoBehaviour
 {
-    public NodeSpawnerScript spawner;
+    //public NodeSpawnerScript spawner;
 
-    public Slider startslider;
-    public Slider endslider;
+    //public Slider startslider;
+    //public Slider endslider;
 
-    public TextMeshProUGUI whitelistDisplay;
-    public GameObject whitelistButtonPrefab;
-    public GameObject whitelistCanvas;
-    public GameObject whitelistToggle;
+    //public TextMeshProUGUI whitelistDisplay;
+    //public GameObject whitelistButtonPrefab;
+    //public GameObject whitelistCanvas;
+    //public GameObject whitelistToggle;
 
-    // Hold IPs that we want to (exclusively) show
-    public List<string> IPWhitelist = new();
-    public Dictionary<string, GameObject> WhitelistButtons = new();
+    //// Hold IPs that we want to (exclusively) show
+    //public List<string> IPWhitelist = new();
+    //public Dictionary<string, GameObject> WhitelistButtons = new();
 
-    public Dictionary<string, DateTime> packetTSMap = new();
+    //public Dictionary<string, DateTime> packetTSMap = new();
 
-    public void Start()
-    {
-        // The 0.0.0.0 button stays active in the unity editor cause I want it to, this hides it come runtime
-        whitelistButtonPrefab.SetActive(false);
-    }
+    //public void Start()
+    //{
+    //    // The 0.0.0.0 button stays active in the unity editor cause I want it to, this hides it come runtime
+    //    whitelistButtonPrefab.SetActive(false);
+    //}
 
     //public void ApplyFilterStates()
     //{

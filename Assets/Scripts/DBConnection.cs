@@ -99,8 +99,8 @@ public class DBConnection : MonoBehaviour
         public DateTime first_seen;
         public DateTime last_seen;
         public List<l4_proto> protos;
-        public PhysicalAddress[] node_a_macs;
-        public PhysicalAddress[] node_b_macs;
+        public List<PhysicalAddress> node_a_macs;
+        public List<PhysicalAddress> node_b_macs;
         public ushort[] node_a_src_ports;
         public ushort[] node_a_dst_ports;
         public List<l7_proto> node_a_l7_protos;
@@ -276,7 +276,7 @@ public class DBConnection : MonoBehaviour
         {
             Node dbRecord = new Node();
             string macFromDb = Convert.ToString(reader.GetValue(reader.GetOrdinal("mac")));
-            dbRecord.mac = PhysicalAddress.Parse(macFromDb);
+            //dbRecord.mac = PhysicalAddress.Parse(macFromDb);
             dbRecord.pkts = Convert.ToInt32(reader.GetValue(reader.GetOrdinal("pkts")));
             dbRecord.bytes = Convert.ToInt32(reader.GetValue(reader.GetOrdinal("bytes")));
             dbRecord.first_seen = reader.GetDateTime(reader.GetOrdinal("first_seen"));
@@ -323,12 +323,12 @@ public class DBConnection : MonoBehaviour
             dbRecord.protos = new List<l4_proto>();
             byte[] l4s = (byte[])reader.GetValue(reader.GetOrdinal("protos"));
             foreach (byte l4 in l4s) dbRecord.protos.Add((l4_proto)l4);
-            dbRecord.node_a_macs = [];
+            //dbRecord.node_a_macs = new List<PhysicalAddress>();
             string[] macsFromDb = (string[])reader.GetValue(reader.GetOrdinal("node_a_macs"));
-            foreach (string mac in macsFromDb) dbRecord.node_a_macs.Append(PhysicalAddress.Parse(mac));
-            dbRecord.node_b_macs = [];
-            macsFromDb = (string[])reader.GetValue(reader.GetOrdinal("node_b_macs"));
-            foreach (string mac in macsFromDb) dbRecord.node_b_macs.Append(PhysicalAddress.Parse(mac));
+            foreach (string mac in macsFromDb) dbRecord.node_a_macs.Add(PhysicalAddress.Parse(mac));
+            //dbRecord.node_b_macs = new List<PhysicalAddress>();
+            macsFromDb = (string[])reader.GetValue(reader.GetOrdinal("node_a_macs"));
+            foreach (string mac in macsFromDb) dbRecord.node_b_macs.Add(PhysicalAddress.Parse(mac));
             dbRecord.node_a_src_ports = (ushort[])reader.GetValue(reader.GetOrdinal("node_a_src_ports"));
             dbRecord.node_a_dst_ports = (ushort[])reader.GetValue(reader.GetOrdinal("node_a_dst_ports"));
             String[] l7s = (String[])reader.GetValue(reader.GetOrdinal("node_a_l7_protos"));
