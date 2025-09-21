@@ -1,0 +1,25 @@
+fileFormatVersion: 2
+guid: 6f0805d05caf0f64cbbf866149b47631
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences:
+  - connectionPrefab: {instanceID: 0}
+  - scaleObject: {instanceID: 0}
+  - dbInteractor: {instanceID: 0}
+  - NodePrefab: {instanceID: 0}
+  - ConnectionLight1: {fileID: 2100000, guid: 780d8f2c07c7f894ea19e191729ea0e0, type: 2}
+  - ConnectionLight2: {fileID: 2100000, guid: 7591d8289114d4f42a5034017c8e14ea, type: 2}
+  - ConnectionLight3: {instanceID: 0}
+  - ConnectionMedium4: {instanceID: 0}
+  - ConnectionMedium5: {instanceID: 0}
+  - ConnectionMedium6: {instanceID: 0}
+  - ConnectionMedium7: {instanceID: 0}
+  - ConnectionHeavy8: {instanceID: 0}
+  - ConnectionHeavy9: {instanceID: 0}
+  - ConnectionHeavy10: {instanceID: 0}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

@@ -1,0 +1,987 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>ClickHouse.Ado</name>
+    </assembly>
+    <members>
+        <member name="T:ClickHouse.Ado.AdoExtensions">
+            <summary>
+                Some extensions to make life with ADO easier.
+            </summary>
+        </member>
+        <member name="M:ClickHouse.Ado.AdoExtensions.ReadAll``1(``0,System.Action{``0})">
+            <summary>
+                Read all rows from all result sets from the <see cref="T:System.Data.IDataReader" />.
+            </summary>
+            <param name="reader">Data reader.</param>
+            <param name="rowAction">Action to call for each row.</param>
+            <typeparam name="T"><see cref="T:System.Data.IDataReader" /> implementing class.</typeparam>
+        </member>
+        <member name="M:ClickHouse.Ado.AdoExtensions.AddParameter``1(``0,System.String,System.Data.DbType,System.Object)">
+            <summary>
+                Adds named parameter with type and value to the command (chainable).
+            </summary>
+            <param name="cmd">Command.</param>
+            <param name="name">Parameter name.</param>
+            <param name="type">Parameter type.</param>
+            <param name="value">Parameter value.</param>
+            <typeparam name="T">Type of <see cref="T:System.Data.IDbCommand" />.</typeparam>
+            <returns><code>this</code> for call chaining.</returns>
+        </member>
+        <member name="M:ClickHouse.Ado.AdoExtensions.AddParameter``1(``0,System.String,System.Object)">
+            <summary>
+                Adds named parameter with type and value to the command (chainable).
+            </summary>
+            <param name="cmd">Command.</param>
+            <param name="name">Parameter name.</param>
+            <param name="value">Parameter value.</param>
+            <typeparam name="T">Type of <see cref="T:System.Data.IDbCommand" />.</typeparam>
+            <returns><code>this</code> for call chaining.</returns>
+        </member>
+        <member name="T:ClickHouse.Ado.ClickHouseCommand">
+            <summary>
+                Clickhouse-specific database command implementation.
+            </summary>
+        </member>
+        <member name="M:ClickHouse.Ado.ClickHouseCommand.#ctor">
+            <summary>
+                Creates empty command.
+            </summary>
+        </member>
+        <member name="M:ClickHouse.Ado.ClickHouseCommand.#ctor(ClickHouse.Ado.ClickHouseConnection)">
+            <summary>
+                Creates empty command bound to connection.
+            </summary>
+            <param name="clickHouseConnection">Database connection.</param>
+        </member>
+        <member name="M:ClickHouse.Ado.ClickHouseCommand.#ctor(ClickHouse.Ado.ClickHouseConnection,System.String)">
+            <summary>
+                Creates command with specified text bound to connection.
+            </summary>
+            <param name="clickHouseConnection">Database connection.</param>
+            <param name="text">Command text.</param>
+        </member>
+        <member name="P:ClickHouse.Ado.ClickHouseCommand.DbConnection">
+            <inheritdoc />
+        </member>
+        <member name="P:ClickHouse.Ado.ClickHouseCommand.DbParameterCollection">
+            <inheritdoc />
+        </member>
+        <member name="P:ClickHouse.Ado.ClickHouseCommand.DbTransaction">
+            <inheritdoc />
+        </member>
+        <member name="P:ClickHouse.Ado.ClickHouseCommand.DesignTimeVisible">
+            <inheritdoc />
+        </member>
+        <member name="P:ClickHouse.Ado.ClickHouseCommand.Parameters">
+            <inheritdoc cref="P:ClickHouse.Ado.ClickHouseCommand.Parameters" />
+        </member>
+        <member name="M:ClickHouse.Ado.ClickHouseCommand.Prepare">
+            <inheritdoc />
+        </member>
+        <member name="M:ClickHouse.Ado.ClickHouseCommand.Cancel">
+            <inheritdoc />
+        </member>
+        <member name="P:ClickHouse.Ado.ClickHouseCommand.CommandType">
+            <inheritdoc />
+        </member>
+        <member name="P:ClickHouse.Ado.ClickHouseCommand.UpdatedRowSource">
+            <inheritdoc />
+        </member>
+        <member name="M:ClickHouse.Ado.ClickHouseCommand.ExecuteNonQuery">
+            <inheritdoc />
+        </member>
+        <member name="M:ClickHouse.Ado.ClickHouseCommand.ExecuteScalar">
+            <inheritdoc />
+        </member>
+        <member name="P:ClickHouse.Ado.ClickHouseCommand.CommandText">
+            <inheritdoc />
+        </member>
+        <member name="P:ClickHouse.Ado.ClickHouseCommand.CommandTimeout">
+            <inheritdoc />
+        </member>
+        <member name="M:ClickHouse.Ado.ClickHouseCommand.CreateDbParameter">
+            <inheritdoc />
+        </member>
+        <member name="M:ClickHouse.Ado.ClickHouseCommand.ExecuteDbDataReader(System.Data.CommandBehavior)">
+            <inheritdoc />
+        </member>
+        <member name="M:ClickHouse.Ado.ClickHouseCommand.ExecuteDbDataReaderAsync(System.Data.CommandBehavior,System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
+        <member name="M:ClickHouse.Ado.ClickHouseCommand.ExecuteNonQueryAsync(System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
+        <member name="M:ClickHouse.Ado.ClickHouseCommand.ExecuteScalarAsync(System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
+        <member name="T:ClickHouse.Ado.ClickHouseConnection">
+            <summary>
+                Clickhouse-specific database connection.
+            </summary>
+        </member>
+        <member name="M:ClickHouse.Ado.ClickHouseConnection.#ctor">
+            <summary>
+                Creates empty connection.
+            </summary>
+        </member>
+        <member name="M:ClickHouse.Ado.ClickHouseConnection.#ctor(ClickHouse.Ado.ClickHouseConnectionSettings)">
+            <summary>
+                Creates connection with specified connection settings.
+            </summary>
+            <param name="settings">Connection settings.</param>
+        </member>
+        <member name="M:ClickHouse.Ado.ClickHouseConnection.#ctor(System.String)">
+            <summary>
+                Creates connection with connection string.
+            </summary>
+            <param name="connectionString">Connection string.</param>
+        </member>
+        <member name="P:ClickHouse.Ado.ClickHouseConnection.ConnectionSettings">
+            <summary>
+                Connection settings read from connection string.
+            </summary>
+        </member>
+        <member name="P:ClickHouse.Ado.ClickHouseConnection.TlsClientCertificate">
+            <summary>
+                TLS client certificate to use for authentication. <see cref="P:ClickHouse.Ado.ClickHouseConnectionSettings.Encrypt" /> should be set
+                to <code>true</code>.
+            </summary>
+        </member>
+        <member name="P:ClickHouse.Ado.ClickHouseConnection.TlsServerCertificateValidationCallback">
+            <summary>
+                Validation callback to use on server certificate. <see cref="P:ClickHouse.Ado.ClickHouseConnectionSettings.Encrypt" /> should be set
+                to <code>true</code>.
+            </summary>
+            <remarks>By default it accepts all certificates: self-signed, expired, etc.</remarks>
+        </member>
+        <member name="P:ClickHouse.Ado.ClickHouseConnection.ServerInfo">
+            <summary>
+                Information about connected server.
+            </summary>
+        </member>
+        <member name="P:ClickHouse.Ado.ClickHouseConnection.DataSource">
+            <inheritdoc />
+        </member>
+        <member name="P:ClickHouse.Ado.ClickHouseConnection.ServerVersion">
+            <inheritdoc />
+        </member>
+        <member name="M:ClickHouse.Ado.ClickHouseConnection.Close">
+            <inheritdoc />
+        </member>
+        <member name="M:ClickHouse.Ado.ClickHouseConnection.Open">
+            <inheritdoc />
+        </member>
+        <member name="P:ClickHouse.Ado.ClickHouseConnection.ConnectionString">
+            <inheritdoc />
+        </member>
+        <member name="P:ClickHouse.Ado.ClickHouseConnection.Database">
+            <inheritdoc />
+        </member>
+        <member name="M:ClickHouse.Ado.ClickHouseConnection.ChangeDatabase(System.String)">
+            <inheritdoc />
+        </member>
+        <member name="P:ClickHouse.Ado.ClickHouseConnection.State">
+            <inheritdoc />
+        </member>
+        <member name="M:ClickHouse.Ado.ClickHouseConnection.Dispose(System.Boolean)">
+            <inheritdoc />
+        </member>
+        <member name="M:ClickHouse.Ado.ClickHouseConnection.OpenAsync(System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
+        <member name="M:ClickHouse.Ado.ClickHouseConnection.BeginDbTransaction(System.Data.IsolationLevel)">
+            <inheritdoc />
+        </member>
+        <member name="M:ClickHouse.Ado.ClickHouseConnection.CreateDbCommand">
+            <inheritdoc />
+        </member>
+        <member name="M:ClickHouse.Ado.ClickHouseConnection.CreateCommand">
+            <inheritdoc cref="M:ClickHouse.Ado.ClickHouseConnection.CreateCommand" />
+        </member>
+        <member name="M:ClickHouse.Ado.ClickHouseConnection.CreateCommand(System.String)">
+            <inheritdoc cref="M:ClickHouse.Ado.ClickHouseConnection.CreateCommand" />
+        </member>
+        <member name="T:ClickHouse.Ado.ClickHouseConnectionSettings">
+            <summary>
+                Clickhouse connection settings.
+            </summary>
+            <remarks>
+                Most connection settings are ripped from clickhouse server and native client sources and completely ignored by this
+                driver.
+                See docs on individual setting to check if it should work or not.
+            </remarks>
+        </member>
+        <member name="M:ClickHouse.Ado.ClickHouseConnectionSettings.#ctor">
+            <summary>
+                Creates empty connection settings.
+            </summary>
+        </member>
+        <member name="M:ClickHouse.Ado.ClickHouseConnectionSettings.#ctor(System.String)">
+            <summary>
+                Creates connection settings from the connection string.
+            </summary>
+            <param name="connectionString">Connection string.</param>
+            <exception cref="T:System.FormatException">When connection string parameter is not supported.</exception>
+        </member>
+        <member name="P:ClickHouse.Ado.ClickHouseConnectionSettings.Async">
+            <summary>
+                Ignored.
+            </summary>
+        </member>
+        <member name="P:ClickHouse.Ado.ClickHouseConnectionSettings.BufferSize">
+            <summary>
+                Size of socket buffer in bytes. Should be at least 4K, and 32K+ improves stability on slower networks and long
+                requests.
+            </summary>
+        </member>
+        <member name="P:ClickHouse.Ado.ClickHouseConnectionSettings.ApacheBufferSize">
+            <summary>
+                Ignored.
+            </summary>
+        </member>
+        <member name="P:ClickHouse.Ado.ClickHouseConnectionSettings.SocketTimeout">
+            <summary>
+                Timeout for low-level socket operations in milliseconds. Default 1000 (1s) should be reasonable for most cases.
+            </summary>
+        </member>
+        <member name="P:ClickHouse.Ado.ClickHouseConnectionSettings.ConnectionTimeout">
+            <summary>
+                Ignored.
+            </summary>
+        </member>
+        <member name="P:ClickHouse.Ado.ClickHouseConnectionSettings.DataTransferTimeout">
+            <summary>
+                Ignored.
+            </summary>
+        </member>
+        <member name="P:ClickHouse.Ado.ClickHouseConnectionSettings.KeepAliveTimeout">
+            <summary>
+                Ignored.
+            </summary>
+        </member>
+        <member name="P:ClickHouse.Ado.ClickHouseConnectionSettings.TimeToLiveMillis">
+            <summary>
+                Ignored.
+            </summary>
+        </member>
+        <member name="P:ClickHouse.Ado.ClickHouseConnectionSettings.DefaultMaxPerRoute">
+            <summary>
+                Ignored.
+            </summary>
+        </member>
+        <member name="P:ClickHouse.Ado.ClickHouseConnectionSettings.MaxTotal">
+            <summary>
+                Ignored.
+            </summary>
+        </member>
+        <member name="P:ClickHouse.Ado.ClickHouseConnectionSettings.ClientName">
+            <summary>
+                Name of the client (it is logged on server).
+            </summary>
+        </member>
+        <member name="P:ClickHouse.Ado.ClickHouseConnectionSettings.Host">
+            <summary>
+                Hostname of the server. Or IP address.
+            </summary>
+        </member>
+        <member name="P:ClickHouse.Ado.ClickHouseConnectionSettings.Port">
+            <summary>
+                Port number to connect to.
+            </summary>
+            <remarks>
+                It should be native protocol port, not HTTP.
+                By default clickhouse uses port 9000 in non-TLS mode and 9440 in TLS (see <see cref="P:ClickHouse.Ado.ClickHouseConnectionSettings.Encrypt" />).
+            </remarks>
+        </member>
+        <member name="P:ClickHouse.Ado.ClickHouseConnectionSettings.MaxCompressBufferSize">
+            <summary>
+                Ignored.
+            </summary>
+        </member>
+        <member name="P:ClickHouse.Ado.ClickHouseConnectionSettings.MaxParallelReplicas">
+            <summary>
+                Ignored.
+            </summary>
+        </member>
+        <member name="P:ClickHouse.Ado.ClickHouseConnectionSettings.TotalsMode">
+            <summary>
+                Ignored.
+            </summary>
+        </member>
+        <member name="P:ClickHouse.Ado.ClickHouseConnectionSettings.QuotaKey">
+            <summary>
+                Ignored.
+            </summary>
+        </member>
+        <member name="P:ClickHouse.Ado.ClickHouseConnectionSettings.Priority">
+            <summary>
+                Ignored.
+            </summary>
+        </member>
+        <member name="P:ClickHouse.Ado.ClickHouseConnectionSettings.Database">
+            <summary>
+                Name of the database to connect to. Can be changed later by SQL "USE" or
+                <see cref="M:ClickHouse.Ado.ClickHouseConnection.ChangeDatabase(System.String)" />.
+            </summary>
+        </member>
+        <member name="P:ClickHouse.Ado.ClickHouseConnectionSettings.Compress">
+            <summary>
+                Use data compression. Drastically reduces network traffic in some cases and mostly useless if you do OLAP queries
+                resulting in &lt;100 rows.
+            </summary>
+        </member>
+        <member name="P:ClickHouse.Ado.ClickHouseConnectionSettings.Compressor">
+            <summary>
+                Which compressor to use. Should be set to default LZ4, as zstd and LZ4HC are not supported by this driver.
+            </summary>
+        </member>
+        <member name="P:ClickHouse.Ado.ClickHouseConnectionSettings.CheckCompressedHash">
+            <summary>
+                Check hashes of compressed data. Should be left on (default).
+            </summary>
+        </member>
+        <member name="P:ClickHouse.Ado.ClickHouseConnectionSettings.Decompress">
+            <summary>
+                Ignored.
+            </summary>
+        </member>
+        <member name="P:ClickHouse.Ado.ClickHouseConnectionSettings.Extremes">
+            <summary>
+                Ignored.
+            </summary>
+        </member>
+        <member name="P:ClickHouse.Ado.ClickHouseConnectionSettings.MaxThreads">
+            <summary>
+                Ignored.
+            </summary>
+        </member>
+        <member name="P:ClickHouse.Ado.ClickHouseConnectionSettings.MaxExecutionTime">
+            <summary>
+                Ignored.
+            </summary>
+        </member>
+        <member name="P:ClickHouse.Ado.ClickHouseConnectionSettings.MaxBlockSize">
+            <summary>
+                Ignored.
+            </summary>
+        </member>
+        <member name="P:ClickHouse.Ado.ClickHouseConnectionSettings.MaxRowsToGroupBy">
+            <summary>
+                Ignored.
+            </summary>
+        </member>
+        <member name="P:ClickHouse.Ado.ClickHouseConnectionSettings.Profile">
+            <summary>
+                Ignored.
+            </summary>
+        </member>
+        <member name="P:ClickHouse.Ado.ClickHouseConnectionSettings.User">
+            <summary>
+                User name to connect with.
+            </summary>
+        </member>
+        <member name="P:ClickHouse.Ado.ClickHouseConnectionSettings.Password">
+            <summary>
+                Password to connect with.
+            </summary>
+        </member>
+        <member name="P:ClickHouse.Ado.ClickHouseConnectionSettings.DistributedAggregationMemoryEfficient">
+            <summary>
+                Ignored.
+            </summary>
+        </member>
+        <member name="P:ClickHouse.Ado.ClickHouseConnectionSettings.MaxBytesBeforeExternalGroupBy">
+            <summary>
+                Ignored.
+            </summary>
+        </member>
+        <member name="P:ClickHouse.Ado.ClickHouseConnectionSettings.MaxBytesBeforeExternalSort">
+            <summary>
+                Ignored.
+            </summary>
+        </member>
+        <member name="P:ClickHouse.Ado.ClickHouseConnectionSettings.Encrypt">
+            <summary>
+                Wrap all the network traffic into TLS stream. Also enables to use
+                <see cref="P:ClickHouse.Ado.ClickHouseConnection.TlsServerCertificateValidationCallback" /> and
+                <see cref="P:ClickHouse.Ado.ClickHouseConnection.TlsClientCertificate" />.
+            </summary>
+        </member>
+        <member name="P:ClickHouse.Ado.ClickHouseConnectionSettings.Trace">
+            <summary>
+                Write all the queries (in their final form) to the <see cref="T:System.Diagnostics.Trace" /> with "ClickHouse.Ado"
+                category.
+            </summary>
+            <remarks>All parameter values (except for bulk inserts) will be present in the trace output! Beware security risks!</remarks>
+        </member>
+        <member name="M:ClickHouse.Ado.ClickHouseConnectionSettings.ToString">
+            <summary>
+                Converts connection settings back to connection string form.
+            </summary>
+            <returns>Connection string.</returns>
+        </member>
+        <member name="T:ClickHouse.Ado.ClickHouseDataReader">
+            <summary>
+                Clickhouse specific data reader.
+            </summary>
+        </member>
+        <member name="P:ClickHouse.Ado.ClickHouseDataReader.Item(System.String)">
+            <inheritdoc />
+        </member>
+        <member name="P:ClickHouse.Ado.ClickHouseDataReader.Item(System.Int32)">
+            <inheritdoc />
+        </member>
+        <member name="P:ClickHouse.Ado.ClickHouseDataReader.HasRows">
+            <inheritdoc />
+        </member>
+        <member name="M:ClickHouse.Ado.ClickHouseDataReader.GetName(System.Int32)">
+            <inheritdoc />
+        </member>
+        <member name="M:ClickHouse.Ado.ClickHouseDataReader.GetDataTypeName(System.Int32)">
+            <inheritdoc />
+        </member>
+        <member name="M:ClickHouse.Ado.ClickHouseDataReader.GetFieldType(System.Int32)">
+            <inheritdoc />
+        </member>
+        <member name="M:ClickHouse.Ado.ClickHouseDataReader.GetValue(System.Int32)">
+            <inheritdoc />
+        </member>
+        <member name="M:ClickHouse.Ado.ClickHouseDataReader.GetValues(System.Object[])">
+            <inheritdoc />
+        </member>
+        <member name="M:ClickHouse.Ado.ClickHouseDataReader.GetOrdinal(System.String)">
+            <inheritdoc />
+        </member>
+        <member name="M:ClickHouse.Ado.ClickHouseDataReader.GetBoolean(System.Int32)">
+            <inheritdoc />
+        </member>
+        <member name="M:ClickHouse.Ado.ClickHouseDataReader.GetByte(System.Int32)">
+            <inheritdoc />
+        </member>
+        <member name="M:ClickHouse.Ado.ClickHouseDataReader.GetBytes(System.Int32,System.Int64,System.Byte[],System.Int32,System.Int32)">
+            <inheritdoc />
+        </member>
+        <member name="M:ClickHouse.Ado.ClickHouseDataReader.GetChar(System.Int32)">
+            <inheritdoc />
+        </member>
+        <member name="M:ClickHouse.Ado.ClickHouseDataReader.GetChars(System.Int32,System.Int64,System.Char[],System.Int32,System.Int32)">
+            <inheritdoc />
+        </member>
+        <member name="M:ClickHouse.Ado.ClickHouseDataReader.GetGuid(System.Int32)">
+            <inheritdoc />
+        </member>
+        <member name="M:ClickHouse.Ado.ClickHouseDataReader.GetInt16(System.Int32)">
+            <inheritdoc />
+        </member>
+        <member name="M:ClickHouse.Ado.ClickHouseDataReader.GetInt32(System.Int32)">
+            <inheritdoc />
+        </member>
+        <member name="M:ClickHouse.Ado.ClickHouseDataReader.GetInt64(System.Int32)">
+            <inheritdoc />
+        </member>
+        <member name="M:ClickHouse.Ado.ClickHouseDataReader.GetFloat(System.Int32)">
+            <inheritdoc />
+        </member>
+        <member name="M:ClickHouse.Ado.ClickHouseDataReader.GetDouble(System.Int32)">
+            <inheritdoc />
+        </member>
+        <member name="M:ClickHouse.Ado.ClickHouseDataReader.GetString(System.Int32)">
+            <inheritdoc />
+        </member>
+        <member name="M:ClickHouse.Ado.ClickHouseDataReader.GetDecimal(System.Int32)">
+            <inheritdoc />
+        </member>
+        <member name="M:ClickHouse.Ado.ClickHouseDataReader.GetDateTime(System.Int32)">
+            <inheritdoc />
+        </member>
+        <member name="M:ClickHouse.Ado.ClickHouseDataReader.IsDBNull(System.Int32)">
+            <inheritdoc />
+        </member>
+        <member name="P:ClickHouse.Ado.ClickHouseDataReader.FieldCount">
+            <inheritdoc />
+        </member>
+        <member name="M:ClickHouse.Ado.ClickHouseDataReader.Close">
+            <inheritdoc />
+        </member>
+        <member name="M:ClickHouse.Ado.ClickHouseDataReader.NextResult">
+            <inheritdoc />
+        </member>
+        <member name="M:ClickHouse.Ado.ClickHouseDataReader.Read">
+            <inheritdoc />
+        </member>
+        <member name="P:ClickHouse.Ado.ClickHouseDataReader.Depth">
+            <inheritdoc />
+        </member>
+        <member name="P:ClickHouse.Ado.ClickHouseDataReader.IsClosed">
+            <inheritdoc />
+        </member>
+        <member name="P:ClickHouse.Ado.ClickHouseDataReader.RecordsAffected">
+            <inheritdoc />
+        </member>
+        <member name="M:ClickHouse.Ado.ClickHouseDataReader.Dispose(System.Boolean)">
+            <inheritdoc />
+        </member>
+        <member name="M:ClickHouse.Ado.ClickHouseDataReader.DisposeAsync">
+            <inheritdoc />
+        </member>
+        <member name="M:ClickHouse.Ado.ClickHouseDataReader.GetEnumerator">
+            <inheritdoc />
+        </member>
+        <member name="M:ClickHouse.Ado.ClickHouseDataReader.CloseAsync">
+            <inheritdoc />
+        </member>
+        <member name="M:ClickHouse.Ado.ClickHouseDataReader.NextResultAsync(System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
+        <member name="M:ClickHouse.Ado.ClickHouseDataReader.ReadAsync(System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
+        <member name="T:ClickHouse.Ado.ClickHouseException">
+            <summary>
+                Clickhouse specific exception.
+            </summary>
+        </member>
+        <member name="F:ClickHouse.Ado.ClickHouseException.Code">
+            <summary>
+                Exception code.
+            </summary>
+        </member>
+        <member name="F:ClickHouse.Ado.ClickHouseException.Name">
+            <summary>
+                Exception name.
+            </summary>
+        </member>
+        <member name="F:ClickHouse.Ado.ClickHouseException.ServerStackTrace">
+            <summary>
+                Server stack trace.
+            </summary>
+        </member>
+        <member name="M:ClickHouse.Ado.ClickHouseException.#ctor">
+            <summary>
+                Creates empty exception.
+            </summary>
+        </member>
+        <member name="M:ClickHouse.Ado.ClickHouseException.#ctor(System.String)">
+            <summary>
+                Creates exception with message.
+            </summary>
+            <param name="message">Message.</param>
+        </member>
+        <member name="M:ClickHouse.Ado.ClickHouseException.#ctor(System.String,System.Exception)">
+            <summary>
+                Creates exception with message and inner exception.
+            </summary>
+            <param name="message">Message.</param>
+            <param name="innerException">Inner exception.</param>
+        </member>
+        <member name="T:ClickHouse.Ado.ClickHouseParameter">
+            <summary>
+                Clickhouse specific command parameter.
+            </summary>
+        </member>
+        <member name="P:ClickHouse.Ado.ClickHouseParameter.Direction">
+            <inheritdoc />
+        </member>
+        <member name="P:ClickHouse.Ado.ClickHouseParameter.IsNullable">
+            <inheritdoc />
+        </member>
+        <member name="P:ClickHouse.Ado.ClickHouseParameter.SourceColumn">
+            <inheritdoc />
+        </member>
+        <member name="P:ClickHouse.Ado.ClickHouseParameter.SourceColumnNullMapping">
+            <inheritdoc />
+        </member>
+        <member name="P:ClickHouse.Ado.ClickHouseParameter.Size">
+            <inheritdoc />
+        </member>
+        <member name="P:ClickHouse.Ado.ClickHouseParameter.DbType">
+            <inheritdoc />
+        </member>
+        <member name="P:ClickHouse.Ado.ClickHouseParameter.ParameterName">
+            <inheritdoc />
+        </member>
+        <member name="P:ClickHouse.Ado.ClickHouseParameter.Value">
+            <inheritdoc />
+        </member>
+        <member name="M:ClickHouse.Ado.ClickHouseParameter.ResetDbType">
+            <inheritdoc />
+        </member>
+        <member name="M:ClickHouse.Ado.ClickHouseParameter.ToString">
+            <inheritdoc />
+        </member>
+        <member name="T:ClickHouse.Ado.ClickHouseParameterCollection">
+            <summary>
+                Collection of <see cref="T:ClickHouse.Ado.ClickHouseParameter" />.
+            </summary>
+        </member>
+        <member name="P:ClickHouse.Ado.ClickHouseParameterCollection.Item(System.Int32)">
+            <summary>
+                Gets parameter by its index.
+            </summary>
+            <param name="index">Index.</param>
+        </member>
+        <member name="P:ClickHouse.Ado.ClickHouseParameterCollection.Item(System.String)">
+            <summary>
+                Gets parameter by its name.
+            </summary>
+            <param name="parameterName">Parameter name.</param>
+        </member>
+        <member name="M:ClickHouse.Ado.ClickHouseParameterCollection.CopyTo(System.Array,System.Int32)">
+            <inheritdoc />
+        </member>
+        <member name="P:ClickHouse.Ado.ClickHouseParameterCollection.Count">
+            <inheritdoc />
+        </member>
+        <member name="P:ClickHouse.Ado.ClickHouseParameterCollection.SyncRoot">
+            <inheritdoc />
+        </member>
+        <member name="P:ClickHouse.Ado.ClickHouseParameterCollection.IsSynchronized">
+            <inheritdoc />
+        </member>
+        <member name="M:ClickHouse.Ado.ClickHouseParameterCollection.Clear">
+            <inheritdoc />
+        </member>
+        <member name="M:ClickHouse.Ado.ClickHouseParameterCollection.RemoveAt(System.Int32)">
+            <inheritdoc />
+        </member>
+        <member name="P:ClickHouse.Ado.ClickHouseParameterCollection.IsReadOnly">
+            <inheritdoc />
+        </member>
+        <member name="P:ClickHouse.Ado.ClickHouseParameterCollection.IsFixedSize">
+            <inheritdoc />
+        </member>
+        <member name="M:ClickHouse.Ado.ClickHouseParameterCollection.Contains(System.String)">
+            <inheritdoc />
+        </member>
+        <member name="M:ClickHouse.Ado.ClickHouseParameterCollection.IndexOf(System.String)">
+            <inheritdoc />
+        </member>
+        <member name="M:ClickHouse.Ado.ClickHouseParameterCollection.RemoveAt(System.String)">
+            <inheritdoc />
+        </member>
+        <member name="M:ClickHouse.Ado.ClickHouseParameterCollection.SetParameter(System.String,System.Data.Common.DbParameter)">
+            <inheritdoc />
+        </member>
+        <member name="M:ClickHouse.Ado.ClickHouseParameterCollection.Add(System.Object)">
+            <inheritdoc />
+        </member>
+        <member name="M:ClickHouse.Ado.ClickHouseParameterCollection.AddRange(System.Array)">
+            <inheritdoc />
+        </member>
+        <member name="M:ClickHouse.Ado.ClickHouseParameterCollection.Contains(System.Object)">
+            <inheritdoc />
+        </member>
+        <member name="M:ClickHouse.Ado.ClickHouseParameterCollection.IndexOf(System.Object)">
+            <inheritdoc />
+        </member>
+        <member name="M:ClickHouse.Ado.ClickHouseParameterCollection.Insert(System.Int32,System.Object)">
+            <inheritdoc />
+        </member>
+        <member name="M:ClickHouse.Ado.ClickHouseParameterCollection.Remove(System.Object)">
+            <inheritdoc />
+        </member>
+        <member name="M:ClickHouse.Ado.ClickHouseParameterCollection.SetParameter(System.Int32,System.Data.Common.DbParameter)">
+            <inheritdoc />
+        </member>
+        <member name="M:ClickHouse.Ado.ClickHouseParameterCollection.GetParameter(System.String)">
+            <inheritdoc />
+        </member>
+        <member name="M:ClickHouse.Ado.ClickHouseParameterCollection.GetEnumerator">
+            <inheritdoc />
+        </member>
+        <member name="M:ClickHouse.Ado.ClickHouseParameterCollection.GetParameter(System.Int32)">
+            <inheritdoc />
+        </member>
+        <member name="M:ClickHouse.Ado.ClickHouseParameterCollection.Add(ClickHouse.Ado.ClickHouseParameter)">
+            <inheritdoc cref="M:ClickHouse.Ado.ClickHouseParameterCollection.Add(System.Object)" />
+        </member>
+        <member name="M:ClickHouse.Ado.ClickHouseParameterCollection.Contains(ClickHouse.Ado.ClickHouseParameter)">
+            <inheritdoc cref="M:ClickHouse.Ado.ClickHouseParameterCollection.Contains(System.Object)" />
+        </member>
+        <member name="M:ClickHouse.Ado.ClickHouseParameterCollection.IndexOf(ClickHouse.Ado.ClickHouseParameter)">
+            <inheritdoc cref="M:ClickHouse.Ado.ClickHouseParameterCollection.IndexOf(System.Object)" />
+        </member>
+        <member name="M:ClickHouse.Ado.ClickHouseParameterCollection.Insert(System.Int32,ClickHouse.Ado.ClickHouseParameter)">
+            <inheritdoc cref="M:ClickHouse.Ado.ClickHouseParameterCollection.Insert(System.Int32,System.Object)" />
+        </member>
+        <member name="M:ClickHouse.Ado.ClickHouseParameterCollection.Remove(ClickHouse.Ado.ClickHouseParameter)">
+            <inheritdoc cref="M:ClickHouse.Ado.ClickHouseParameterCollection.Remove(System.Object)" />
+        </member>
+        <member name="M:ClickHouse.Ado.ClickHouseParameterCollection.Add(System.String,System.Object)">
+            <summary>
+                Adds named parameter with value to the collection.
+            </summary>
+            <param name="name">Parameter name.</param>
+            <param name="value">Parameter value.</param>
+            <returns><code>this</code> to chain calls.</returns>
+        </member>
+        <member name="M:ClickHouse.Ado.ClickHouseParameterCollection.Add(System.String,System.Data.DbType,System.Object)">
+            <summary>
+                Adds named parameter with type and value to the collection.
+            </summary>
+            <param name="name">Parameter name.</param>
+            <param name="type">Parameter type.</param>
+            <param name="value">Parameter value.</param>
+            <returns><code>this</code> to chain calls.</returns>
+        </member>
+        <member name="T:ClickHouse.Ado.ClickHouseProviderFactory">
+            <summary>
+                Clickhouse specific database provider factory.
+            </summary>
+        </member>
+        <member name="P:ClickHouse.Ado.ClickHouseProviderFactory.CanCreateBatch">
+            <inheritdoc />
+        </member>
+        <member name="P:ClickHouse.Ado.ClickHouseProviderFactory.CanCreateCommandBuilder">
+            <inheritdoc />
+        </member>
+        <member name="P:ClickHouse.Ado.ClickHouseProviderFactory.CanCreateDataAdapter">
+            <inheritdoc />
+        </member>
+        <member name="P:ClickHouse.Ado.ClickHouseProviderFactory.CanCreateDataSourceEnumerator">
+            <inheritdoc />
+        </member>
+        <member name="M:ClickHouse.Ado.ClickHouseProviderFactory.CreateCommand">
+            <inheritdoc />
+        </member>
+        <member name="M:ClickHouse.Ado.ClickHouseProviderFactory.CreateConnection">
+            <inheritdoc />
+        </member>
+        <member name="M:ClickHouse.Ado.ClickHouseProviderFactory.CreateParameter">
+            <inheritdoc />
+        </member>
+        <member name="T:ClickHouse.Ado.IBulkInsertEnumerable">
+            <summary>
+                Enumeration helped for bulk inserts.
+            </summary>
+            <remarks>Using <see cref="T:ClickHouse.Ado.IBulkInsertEnumerable" /> allows you to avoid mass collection copying on inserts.</remarks>
+        </member>
+        <member name="M:ClickHouse.Ado.IBulkInsertEnumerable.GetColumnData(System.Int32,System.String,System.String)">
+            <summary>
+                Get enumerable data by column.
+            </summary>
+            <param name="colNumber">Number of column.</param>
+            <param name="columnName">Name of column.</param>
+            <param name="schemaType">Column type as fetched from clickhouse command schema.</param>
+            <returns>List of values for specified column.</returns>
+        </member>
+        <member name="T:ClickHouse.Ado.Impl.ColumnTypes.GuidColumnType">
+            <summary> UUID column type </summary>
+        </member>
+        <member name="F:ClickHouse.Ado.Impl.Data.ClientMessageType.Hello">
+            <summary>
+                Имя, версия, ревизия, БД по-умолчанию.
+            </summary>
+        </member>
+        <member name="F:ClickHouse.Ado.Impl.Data.ClientMessageType.Query">
+            <summary>
+                Идентификатор запроса, настройки на отдельный запрос, информация, до какой стадии исполнять запрос, использовать ли
+                сжатие, текст запроса (без данных для INSERT-а).
+            </summary>
+        </member>
+        <member name="F:ClickHouse.Ado.Impl.Data.ClientMessageType.Data">
+            <summary>
+                Блок данных со сжатием или без.
+            </summary>
+        </member>
+        <member name="F:ClickHouse.Ado.Impl.Data.ClientMessageType.Cancel">
+            <summary>
+                Отменить выполнение запроса.
+            </summary>
+        </member>
+        <member name="F:ClickHouse.Ado.Impl.Data.ClientMessageType.Ping">
+            <summary>
+                Проверка живости соединения с сервером.
+            </summary>
+        </member>
+        <member name="T:ClickHouse.Ado.Impl.Data.HttpMethod">
+            <summary>
+                HTTP method in the <see cref="T:ClickHouse.Ado.Impl.Data.ClientInfo" />.
+            </summary>
+        </member>
+        <member name="F:ClickHouse.Ado.Impl.Data.HttpMethod.Unknown">
+            <summary>
+                Unknown
+            </summary>
+        </member>
+        <member name="F:ClickHouse.Ado.Impl.Data.HttpMethod.Get">
+            <summary>
+                GET
+            </summary>
+        </member>
+        <member name="F:ClickHouse.Ado.Impl.Data.HttpMethod.Post">
+            <summary>
+                POST
+            </summary>
+        </member>
+        <member name="T:ClickHouse.Ado.Impl.Data.Interface">
+            <summary>
+                Protocol type in the <see cref="T:ClickHouse.Ado.Impl.Data.ClientInfo" />.
+            </summary>
+        </member>
+        <member name="F:ClickHouse.Ado.Impl.Data.Interface.Tcp">
+            <summary>
+                Native
+            </summary>
+        </member>
+        <member name="F:ClickHouse.Ado.Impl.Data.Interface.Http">
+            <summary>
+                HTTP
+            </summary>
+        </member>
+        <member name="F:ClickHouse.Ado.Impl.Data.LoadBalancing.Random">
+            среди реплик с минимальным количеством ошибок выбирается случайная
+        </member>
+        <member name="F:ClickHouse.Ado.Impl.Data.LoadBalancing.NearestHostname">
+            среди реплик с минимальным количеством ошибок выбирается реплика
+            с минимальным количеством отличающихся символов в имени реплики и имени локального хоста
+        </member>
+        <member name="F:ClickHouse.Ado.Impl.Data.LoadBalancing.InOrder">
+            реплики перебираются строго по порядку; количество ошибок не имеет значение
+        </member>
+        <member name="T:ClickHouse.Ado.Impl.Data.ServerInfo">
+            <summary>
+                Information about connected server.
+            </summary>
+        </member>
+        <member name="F:ClickHouse.Ado.Impl.Data.ServerInfo.Build">
+            <summary>
+                Server build number.
+            </summary>
+        </member>
+        <member name="F:ClickHouse.Ado.Impl.Data.ServerInfo.DisplayName">
+            <summary>
+                Server display name.
+            </summary>
+        </member>
+        <member name="F:ClickHouse.Ado.Impl.Data.ServerInfo.Major">
+            <summary>
+                Server major version number.
+            </summary>
+        </member>
+        <member name="F:ClickHouse.Ado.Impl.Data.ServerInfo.Minor">
+            <summary>
+                Server minor version number.
+            </summary>
+        </member>
+        <member name="F:ClickHouse.Ado.Impl.Data.ServerInfo.Name">
+            <summary>
+                Server name.
+            </summary>
+        </member>
+        <member name="F:ClickHouse.Ado.Impl.Data.ServerInfo.Patch">
+            <summary>
+                Server patch number.
+            </summary>
+        </member>
+        <member name="F:ClickHouse.Ado.Impl.Data.ServerInfo.Timezone">
+            <summary>
+                Server time zone.
+            </summary>
+        </member>
+        <member name="F:ClickHouse.Ado.Impl.Data.ServerMessageType.Hello">
+            <summary>
+                Имя, версия, ревизия.
+            </summary>
+        </member>
+        <member name="F:ClickHouse.Ado.Impl.Data.ServerMessageType.Data">
+            <summary>
+                Блок данных со сжатием или без.
+            </summary>
+        </member>
+        <member name="F:ClickHouse.Ado.Impl.Data.ServerMessageType.Exception">
+            <summary>
+                Исключение во время обработки запроса.
+            </summary>
+        </member>
+        <member name="F:ClickHouse.Ado.Impl.Data.ServerMessageType.Progress">
+            <summary>
+                Прогресс выполнения запроса: строк считано, байт считано.
+            </summary>
+        </member>
+        <member name="F:ClickHouse.Ado.Impl.Data.ServerMessageType.Pong">
+            <summary>
+                Ответ на Ping.
+            </summary>
+        </member>
+        <member name="F:ClickHouse.Ado.Impl.Data.ServerMessageType.EndOfStream">
+            <summary>
+                Все пакеты были переданы.
+            </summary>
+        </member>
+        <member name="F:ClickHouse.Ado.Impl.Data.ServerMessageType.ProfileInfo">
+            <summary>
+                Пакет с профайлинговой информацией.
+            </summary>
+        </member>
+        <member name="F:ClickHouse.Ado.Impl.Data.ServerMessageType.Totals">
+            <summary>
+                Блок данных с тотальными значениями, со сжатием или без.
+            </summary>
+        </member>
+        <member name="F:ClickHouse.Ado.Impl.Data.ServerMessageType.Extremes">
+            <summary>
+                Блок данных с минимумами и максимумами, аналогично.
+            </summary>
+        </member>
+        <member name="F:ClickHouse.Ado.Impl.Data.ServerMessageType.TablesStatusReposnse">
+            <summary>
+                Ответ на TablesStatus.
+            </summary>
+        </member>
+        <member name="F:ClickHouse.Ado.Impl.Data.ServerMessageType.Log">
+            <summary>
+                Логи сервера.
+            </summary>
+        </member>
+        <member name="F:ClickHouse.Ado.Impl.Data.ServerMessageType.TableColumns">
+            <summary>
+                Структура таблицы.
+            </summary>
+        </member>
+        <member name="F:ClickHouse.Ado.Impl.Data.TotalsMode.BeforeHaving">
+            <summary>
+                Считать HAVING по всем прочитанным строкам;
+                включая не попавшие в max_rows_to_group_by
+                и не прошедшие HAVING после группировки.
+            </summary>
+        </member>
+        <member name="F:ClickHouse.Ado.Impl.Data.TotalsMode.AfterHavingInclusive">
+            <summary>
+                Считать по всем строкам, кроме не прошедших HAVING;
+                то есть, включать в TOTALS все строки, не прошедшие max_rows_to_group_by.
+            </summary>
+        </member>
+        <member name="F:ClickHouse.Ado.Impl.Data.TotalsMode.AfterHavingExclusive">
+            <summary>
+                Включать только строки, прошедшие и max_rows_to_group_by, и HAVING.
+            </summary>
+        </member>
+        <member name="F:ClickHouse.Ado.Impl.Data.TotalsMode.AfterHavingAuto">
+            <summary>
+                Автоматически выбирать между INCLUSIVE и EXCLUSIVE.
+            </summary>
+        </member>
+        <member name="F:ClickHouse.Ado.Impl.ProtocolFormatter._baseStream">
+            <summary>
+                Underlaying stream, usually NetworkStream.
+            </summary>
+        </member>
+        <member name="F:ClickHouse.Ado.Impl.ProtocolFormatter._compStream">
+            <summary>
+                Compressed stream, !=null indicated that compression/decompression has beed started.
+            </summary>
+        </member>
+        <member name="F:ClickHouse.Ado.Impl.ProtocolFormatter._ioStream">
+            <summary>
+                Stream to write to/read from, either _baseStream or _compStream.
+            </summary>
+        </member>
+        <member name="F:ClickHouse.Ado.Impl.Settings.QuerySettings.SettingDefaults">
+            <summary>
+                Comments are ripped from Clickhouse source.
+            </summary>
+        </member>
+    </members>
+</doc>
