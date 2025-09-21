@@ -7,8 +7,8 @@ CREATE TABLE net.packets
     ts         DateTime64(6, 'UTC'),
     src_ip     IPv6,
     dst_ip     IPv6,
-    src_mac    String,
-    dst_mac    String,
+    src_mac    FixedString(6),
+    dst_mac    FixedString(6),
 
     l4_proto   Enum16('NONE' = 0, 'ICMP' = 1, 'TCP' = 6, 'UDP' = 17, 'SCTP' = 132),
 
@@ -33,7 +33,7 @@ CREATE TABLE net.packets
     src_port   Nullable(UInt16),
     dst_port   Nullable(UInt16),
     packet_len UInt32,
-    raw        String CODEC(ZSTD(6))
+    raw        String DEFAULT '' CODEC(ZSTD(6))
 
 )
     ENGINE = MergeTree

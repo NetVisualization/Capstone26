@@ -2,14 +2,14 @@ CREATE DATABASE IF NOT EXISTS net;
 
 CREATE TABLE net.nodes_state
 (
-    mac FixedString(12),
+    mac FixedString(6),
 
     num_packets_state AggregateFunction(count),
     num_bytes_state   AggregateFunction(sum, UInt64),
     first_seen_state  AggregateFunction(min, DateTime64(6, 'UTC')),
     last_seen_state   AggregateFunction(max, DateTime64(6, 'UTC')),
 
-    peers_state AggregateFunction(uniqCombined, FixedString(12)),
+    peers_state AggregateFunction(uniqCombined, FixedString(6)),
     ips_state   AggregateFunction(groupUniqArray, IPv6),
 
     -- egress ports only

@@ -4,12 +4,15 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-anyhow = "1.0.99"
-chrono = {version = "0.4.41", features = ["clock", "serde"]}
-clap = {version = "4.5.45", features = ["derive", "env"]}
-clickhouse = {version = "0.13.3", default-features = false, features = ["lz4", "chrono"]}
+anyhow = "1.0.100"
+bytes = "1.10.1"
+chrono = { version = "0.4.42", features = ["serde"] }
+clap = { version = "4.5.48", features = ["derive", "env"] }
+clickhouse = "0.13.3"
 etherparse = "0.19.0"
-pcap = "2.3.0"
-serde = {version = "1.0.219", features = ["derive"]}
-tokio = {version = "1.47.1", features = ["full"]}
-uuid = {version = "1.18.1", features=["v4", "serde"]}
+pcap-parser = "0.17.0"
+serde = { version = "1.0.226", features = ["derive"] }
+thiserror = "2.0.16"
+tokio = { version = "1.47.1", features = ["full"] }
+tracing = "0.1.41"
+tracing-subscriber = { version = "0.3.20", features = ["env-filter", "fmt"] }

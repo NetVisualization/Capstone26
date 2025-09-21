@@ -14,8 +14,8 @@ CREATE TABLE net.connections_state
     protos_state      AggregateFunction(groupUniqArray, UInt8),
 
     -- MACs per side (hex strings)
-    node_a_macs_state AggregateFunction(groupUniqArray, FixedString(12)),
-    node_b_macs_state AggregateFunction(groupUniqArray, FixedString(12)),
+    node_a_macs_state AggregateFunction(groupUniqArray, FixedString(6)),
+    node_b_macs_state AggregateFunction(groupUniqArray, FixedString(6)),
 
     -- Node-A ports only
     node_a_src_ports_state AggregateFunction(groupUniqArray, UInt16),
