@@ -3,46 +3,49 @@ use serde::Serialize;
 
 #[derive(Debug, Serialize, Row)]
 pub struct DbPacket {
-    // EXACT physical column order from your DDL (packets.sql)
-    pub ts: chrono::DateTime<chrono::Utc>, // 1
-    pub src_ip: std::net::Ipv6Addr,        // 2
-    pub dst_ip: std::net::Ipv6Addr,        // 3
-    pub src_mac: [u8; 6],                  // 4 FixedString(6)
-    pub dst_mac: [u8; 6],                  // 5 FixedString(6)
-    pub l4_proto: i16,                     // 6 Enum16 as i16
-    pub l7_proto: i16,                     // 7 Enum16 as i16
-    pub src_port: Option<u16>,             // 8 Nullable(UInt16)
-    pub dst_port: Option<u16>,             // 9 Nullable(UInt16)
-    pub packet_len: u32,                   // 10 UInt32
-    pub raw: String,                       // 11 String (non-null)
+    // Physical column order from your DDL (packets.sql)
+    pub ts: chrono::DateTime<chrono::Utc>,
+    pub src_ip: std::net::Ipv6Addr,
+    pub dst_ip: std::net::Ipv6Addr,
+    pub src_mac: [u8; 6], // FixedString(6)
+    pub dst_mac: [u8; 6], // FixedString(6)
+    pub l4_proto: i16,    // Enum16 value
+    pub l7_proto: i16,    // Enum16 value
+    pub src_port: Option<u16>,
+    pub dst_port: Option<u16>,
+    pub packet_len: u32,
+    pub raw: String, // String (non-null)
 }
 
-pub fn to_db_packet(rec: &pcap2ch::PacketRecord) -> DbPacket {
-    DbPacket {
-        ts: rec.ts,
-        src_ip: rec.src_ip,
-        dst_ip: rec.dst_ip,
-        src_mac: rec.src_mac, // [u8; 6]
-        dst_mac: rec.dst_mac, // [u8; 6]
-        l4_proto: rec.l4_proto as i16,
-        l7_proto: rec.l7_proto as i16,
-        src_port: rec.src_port,
-        dst_port: rec.dst_port,
-        packet_len: rec.packet_len,
-        raw: String::new(), // you can fill this later with payload if desired
+impl DbPacket {
+    pub fn from_record_with_raw(rec: &pcap2ch::PacketRecord, raw: String) -> Self {
+        Self {
+            ts: rec.ts,
+            src_ip: rec.src_ip,
+            dst_ip: rec.dst_ip,
+            src_mac: rec.src_mac,
+            dst_mac: rec.dst_mac,
+            l4_proto: rec.l4_proto as i16,
+            l7_proto: rec.l7_proto as i16,
+            src_port: rec.src_port,
+            dst_port: rec.dst_port,
+            packet_len: rec.packet_len,
+            raw,
+        }
     }
 }
 
+/* ---------- Helpers used by the INSERT VALUES builder ---------- */
+
 pub fn mac_to_hex(m: &[u8; 6]) -> String {
-    // Uppercase hex without separators
     m.iter().map(|b| format!("{:02X}", b)).collect()
 }
 
-// ISO-like string with microseconds for ClickHouse toDateTime64(…, 6, 'UTC')
 pub fn ts_to_str(ts: chrono::DateTime<chrono::Utc>) -> String {
     ts.format("%Y-%m-%d %H:%M:%S%.6f").to_string()
 }
 
+// We send Enum16s by label in the VALUES SQL; map numeric -> label:
 pub fn l4_label_from_code(v: i16) -> &'static str {
     match v {
         0 => "NONE",
