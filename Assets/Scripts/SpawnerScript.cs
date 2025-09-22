@@ -37,6 +37,8 @@ public class NodeSpawnerScript : MonoBehaviour
     Dictionary<string, string> NodeIDAddressRel = new Dictionary<string, string>();  ////// this can def be removed
 
     List<DBConnection.Node> nodeList = new List<DBConnection.Node>();
+    List<DBConnection.Connection> ConnectionList = new List<DBConnection.Connection>();
+    private List<GameObject> spawnedNodes = new List<GameObject>();
 
     void Awake()
     {
@@ -59,9 +61,11 @@ public class NodeSpawnerScript : MonoBehaviour
         else
         {
             nodeList = dbConnection.getNodesAfter(new DateTime(2025, 09, 06, 16, 05, 01));
-            Debug.Log($"{nodeList.Count} nodes");
+            ConnectionList = dbConnection.getConnectionsAfter(new DateTime(2025, 09, 06, 16, 05, 01));
+            Debug.Log($"{ConnectionList.Count} connections");
         }
         MakeNodes();
+        MakeConnections();
         //dbConnection.RequestNodes();
         //dbConnection.RequestConnections();
         //dbConnection.RequestPackets();
@@ -112,23 +116,16 @@ public class NodeSpawnerScript : MonoBehaviour
     {
         foreach (DBConnection.Node node in nodeList)
         {
-            DBConnection.Node dbNode = nodeList[0];
-            Debug.Log($"{dbNode.degree}");
             //dbNode.Initialize
             // Create a new GameObject based on the prefab
             GameObject nodeObject = Instantiate(NodePrefab);
             NodeInfo info = nodeObject.GetComponent<NodeInfo>();
-            info.Initialize(dbNode);
-            Debug.Log($"Spwaned node pkts = {info.data.pkts}");
-            //nodeObject.GetComponent<DBConnection.Node>().mac = node.mac;
-            //nodeObject.GetComponent<NodeData>().IPAddress = node.IPaddr;
-            //nodeObject.GetComponent<NodeData>().DeviceType = node.DeviceType;
-            //nodeObject.GetComponent<NodeData>().NumConnections = node.NumConnections;
-            //nodeObject.GetComponent<NodeData>().NumPackets = node.NumPackets;
-            //nodeObject.GetComponent<NodeData>().Vendor = MACVendorMap.GetVendor(node.MACaddr);
+            info.Initialize(node);
 
             //// Set parent and position
             info.transform.position = placeNodev1(nodeObject);
+
+            spawnedNodes.Add(nodeObject);
 
             //Add a node object to the dictionary with its id as the key
             // NodeObjects[node._id.oid] = nodeObject;
@@ -142,8 +139,33 @@ public class NodeSpawnerScript : MonoBehaviour
 
     void MakeConnections()
     {
-        //    foreach (DBConnection.Connection connection in dbConnection.connections)
-        //    {
+        GameObject firstNode = null;
+        GameObject secondNode = null;
+        foreach (DBConnection.Connection connection in ConnectionList)
+        {
+            foreach (GameObject node in spawnedNodes)
+            {
+                NodeInfo info = node.GetComponent<NodeInfo>();
+                if (connection.node_a == info.data.ips[0])
+                {
+                    firstNode = node;
+                }
+                if (connection.node_b == info.data.ips[0])
+                {
+                    secondNode = node;
+                }
+            }
+            //makes sure there is a connection between 2 nodes
+            if (firstNode != null && secondNode != null)
+            {
+                GameObject connectionObject = Instantiate(connectionPrefab);
+                ConnectionInfo connInfo = connectionObject.GetComponent<ConnectionInfo>();
+                connInfo.data.node1 = firstNode;
+                connInfo.data.node2 = secondNode;
+                connInfo.Initialize(connection);
+            }
+
+        }
         //        // Get connected Nodes
         //        //GameObject firstNode = NodeObjects[NodeIDAddressRel[connection.NodeA_IP]];
         //        //GameObject secondNode = NodeObjects[NodeIDAddressRel[connection.NodeB_IP]];
@@ -259,5 +281,10 @@ public class NodeSpawnerScript : MonoBehaviour
 
         return v;
     }
+    public void connection(Transform connection, Transform a, Transform b)
+    {
+        Vector3 posA = a.position;
+        Vector3 posB = b.position;
     }
+}
 

@@ -104,6 +104,8 @@ public class DBConnection : MonoBehaviour
         public ushort[] node_a_src_ports;
         public ushort[] node_a_dst_ports;
         public List<l7_proto> node_a_l7_protos;
+        public GameObject node1;
+        public GameObject node2;
     }
 
     // Database Packet Object (Get)
@@ -324,11 +326,11 @@ public class DBConnection : MonoBehaviour
             byte[] l4s = (byte[])reader.GetValue(reader.GetOrdinal("protos"));
             foreach (byte l4 in l4s) dbRecord.protos.Add((l4_proto)l4);
             //dbRecord.node_a_macs = new List<PhysicalAddress>();
-            string[] macsFromDb = (string[])reader.GetValue(reader.GetOrdinal("node_a_macs"));
-            foreach (string mac in macsFromDb) dbRecord.node_a_macs.Add(PhysicalAddress.Parse(mac));
+            //string[] macsFromDb = (string[])reader.GetValue(reader.GetOrdinal("node_a_macs"));
+            //foreach (string mac in macsFromDb) dbRecord.node_a_macs.Add(PhysicalAddress.Parse(mac));
             //dbRecord.node_b_macs = new List<PhysicalAddress>();
-            macsFromDb = (string[])reader.GetValue(reader.GetOrdinal("node_a_macs"));
-            foreach (string mac in macsFromDb) dbRecord.node_b_macs.Add(PhysicalAddress.Parse(mac));
+            //macsFromDb = (string[])reader.GetValue(reader.GetOrdinal("node_a_macs"));
+            //foreach (string mac in macsFromDb) dbRecord.node_b_macs.Add(PhysicalAddress.Parse(mac));
             dbRecord.node_a_src_ports = (ushort[])reader.GetValue(reader.GetOrdinal("node_a_src_ports"));
             dbRecord.node_a_dst_ports = (ushort[])reader.GetValue(reader.GetOrdinal("node_a_dst_ports"));
             String[] l7s = (String[])reader.GetValue(reader.GetOrdinal("node_a_l7_protos"));
