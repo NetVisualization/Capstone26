@@ -24,7 +24,7 @@ pub async fn run_file_and_insert(
         let mut sql = String::with_capacity(slice.len() * 256);
         sql.push_str("INSERT INTO ");
         sql.push_str(table);
-        sql.push_str(" (ts, src_ip, dst_ip, src_mac, dst_mac, l4_proto, l7_proto, src_port, dst_port, packet_len, raw) VALUES ");
+        sql.push_str(" (ts, src_ip, dst_ip, src_mac, dst_mac, l4_proto, l7_proto, src_port, dst_port, packet_len, info) VALUES ");
 
         for (j, row) in slice.iter().enumerate() {
             let ts = ts_to_str(row.ts);
@@ -44,7 +44,7 @@ pub async fn run_file_and_insert(
                 .map(|v| v.to_string())
                 .unwrap_or_else(|| "NULL".to_string());
 
-            let raw_sql = escape_sql_single_quotes(&row.raw);
+            let info_sql = escape_sql_single_quotes(&row.info);
 
             if j > 0 {
                 sql.push_str(", ");
@@ -56,7 +56,7 @@ pub async fn run_file_and_insert(
                   toIPv6('{src_ip}'), toIPv6('{dst_ip}'), \
                   CAST(unhex('{src_mac_hex}') AS FixedString(6)), \
                   CAST(unhex('{dst_mac_hex}') AS FixedString(6)), \
-                  '{l4}', '{l7}', {src_port_lit}, {dst_port_lit}, {packet_len}, '{raw_sql}')",
+                  '{l4}', '{l7}', {src_port_lit}, {dst_port_lit}, {packet_len}, '{info_sql}')",
                 packet_len = row.packet_len
             )
             .unwrap();

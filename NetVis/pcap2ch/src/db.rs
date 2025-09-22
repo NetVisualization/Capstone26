@@ -14,11 +14,11 @@ pub struct DbPacket {
     pub src_port: Option<u16>,
     pub dst_port: Option<u16>,
     pub packet_len: u32,
-    pub raw: String, // String (non-null)
+    pub info: String, // String (non-null)
 }
 
 impl DbPacket {
-    pub fn from_record_with_raw(rec: &pcap2ch::PacketRecord, raw: String) -> Self {
+    pub fn from_record_with_info(rec: &pcap2ch::PacketRecord, info: String) -> Self {
         Self {
             ts: rec.ts,
             src_ip: rec.src_ip,
@@ -30,7 +30,7 @@ impl DbPacket {
             src_port: rec.src_port,
             dst_port: rec.dst_port,
             packet_len: rec.packet_len,
-            raw,
+            info,
         }
     }
 }

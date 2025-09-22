@@ -47,7 +47,7 @@ fn parse_pcap(
                         log_packet_summary(&rec);
                         if let Some(ref mut rows) = sink {
                             let info = summarize_packet(&sp);
-                            rows.push(DbPacket::from_record_with_raw(&rec, info));
+                            rows.push(DbPacket::from_record_with_info(&rec, info));
                         }
                         seen += 1;
                     }
@@ -95,7 +95,7 @@ fn parse_pcapng(
                         log_packet_summary(&rec);
                         if let Some(ref mut rows) = sink {
                             let info = summarize_packet(&sp);
-                            rows.push(DbPacket::from_record_with_raw(&rec, info));
+                            rows.push(DbPacket::from_record_with_info(&rec, info));
                         }
                         seen += 1;
                     }

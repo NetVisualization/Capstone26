@@ -33,7 +33,7 @@ CREATE TABLE net.packets
     src_port   Nullable(UInt16),
     dst_port   Nullable(UInt16),
     packet_len UInt32,
-    raw        String DEFAULT '' CODEC(ZSTD(6))
+    info        String DEFAULT '' CODEC(ZSTD(6))
 
 )
     ENGINE = MergeTree

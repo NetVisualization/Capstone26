@@ -71,8 +71,8 @@ pub struct PacketRecord {
     /// Captured packet length (in bytes)
     pub packet_len: u32,
 
-    /// Optional raw payload/frame (leave empty unless you choose to store it)
-    pub raw: Option<Vec<u8>>,
+    /// Optional info payload/frame (leave empty unless you choose to store it)
+    pub info: Option<Vec<u8>>,
 }
 
 impl Default for PacketRecord {
@@ -96,7 +96,7 @@ impl Default for PacketRecord {
             dst_port: None,
 
             packet_len: 0,
-            raw: None,
+            info: None,
         }
     }
 }
