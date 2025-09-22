@@ -14,7 +14,7 @@ use tracing_subscriber::{EnvFilter, fmt};
 #[command(author, version, about)]
 struct Cli {
     /// ClickHouse URL (e.g., http://localhost:8123) — used in Milestone 3
-    #[arg(long, env = "CH_URL", default_value = "http://100.111.112.111:8123")]
+    #[arg(long, env = "CH_URL", default_value = "http://10.200.1.13:8123")]
     ch_url: String,
 
     /// ClickHouse database name
