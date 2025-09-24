@@ -88,3 +88,29 @@ SELECT
     device_type
 FROM net.nodes_state
 GROUP BY mac, device_type;
+
+/* Ensure helper exists even if other files weren’t run first */
+CREATE FUNCTION IF NOT EXISTS format_mac AS (x) ->
+    concat(
+            lower(substring(hex(x), 1, 2)),  ':',
+            lower(substring(hex(x), 3, 2)),  ':',
+            lower(substring(hex(x), 5, 2)),  ':',
+            lower(substring(hex(x), 7, 2)),  ':',
+            lower(substring(hex(x), 9, 2)),  ':',
+            lower(substring(hex(x),11, 2))
+    );
+
+/* Readability view: formats the node key MAC for display */
+CREATE OR REPLACE VIEW net.display_nodes AS
+SELECT
+    format_mac(mac) AS mac,
+    pkts,
+    bytes,
+    first_seen,
+    last_seen,
+    degree,
+    ips,
+    src_ports,
+    l7_protos,
+    device_type
+FROM net.nodes;

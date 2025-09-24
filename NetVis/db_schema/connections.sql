@@ -83,3 +83,31 @@ SELECT
     arraySort(arrayDistinct(groupUniqArrayMerge(node_a_l7_protos_state))) AS node_a_l7_protos
 FROM net.connections_state
 GROUP BY node_a, node_b;
+
+/* Ensure helper exists even if packets.sql wasn’t run first */
+CREATE FUNCTION IF NOT EXISTS format_mac AS (x) ->
+    concat(
+            lower(substring(hex(x), 1, 2)),  ':',
+            lower(substring(hex(x), 3, 2)),  ':',
+            lower(substring(hex(x), 5, 2)),  ':',
+            lower(substring(hex(x), 7, 2)),  ':',
+            lower(substring(hex(x), 9, 2)),  ':',
+            lower(substring(hex(x),11, 2))
+    );
+
+/* Readability view: renders arrays of FixedString(6) MACs as colon-strings */
+CREATE OR REPLACE VIEW net.display_connections AS
+SELECT
+    node_a,
+    node_b,
+    pkts,
+    bytes,
+    first_seen,
+    last_seen,
+    protos,
+    arrayMap(m -> format_mac(m), node_a_macs) AS node_a_macs,
+    arrayMap(m -> format_mac(m), node_b_macs) AS node_b_macs,
+    node_a_src_ports,
+    node_a_dst_ports,
+    node_a_l7_protos
+FROM net.connections;

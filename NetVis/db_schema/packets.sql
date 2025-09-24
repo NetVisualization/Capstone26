@@ -40,3 +40,30 @@ CREATE TABLE net.packets
         PARTITION BY toDate(ts)
         ORDER BY (ts, src_ip, dst_ip)
         SETTINGS index_granularity = 8192;
+
+/* Helper to render FixedString(6) -> "aa:bb:cc:dd:ee:ff" */
+CREATE FUNCTION IF NOT EXISTS format_mac AS (x) ->
+    concat(
+            lower(substring(hex(x), 1, 2)),  ':',
+            lower(substring(hex(x), 3, 2)),  ':',
+            lower(substring(hex(x), 5, 2)),  ':',
+            lower(substring(hex(x), 7, 2)),  ':',
+            lower(substring(hex(x), 9, 2)),  ':',
+            lower(substring(hex(x),11, 2))
+    );
+
+/* Readability view for dashboards & ad-hoc queries */
+CREATE OR REPLACE VIEW net.display_packets AS
+SELECT
+    ts,
+    src_ip,
+    dst_ip,
+    format_mac(src_mac) AS src_mac,
+    format_mac(dst_mac) AS dst_mac,
+    l4_proto,
+    l7_proto,
+    src_port,
+    dst_port,
+    packet_len,
+    info
+FROM net.packets;
