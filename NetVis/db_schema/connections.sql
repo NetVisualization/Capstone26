@@ -1,28 +1,32 @@
 CREATE DATABASE IF NOT EXISTS net;
 
+/* DROP old undirected artifacts (safe if present) */
+DROP VIEW IF EXISTS net.display_connections;
+DROP VIEW IF EXISTS net.connections;
+DROP VIEW IF EXISTS net.mv_packets_to_connections;
+DROP TABLE IF EXISTS net.connections_state;
+
+/* Directed state, keyed by src/dst MAC + IP */
 CREATE TABLE net.connections_state
 (
-    -- normalized endpoints (min/max by IP)
-    node_a IPv6,
-    node_b IPv6,
+    /* key (directed) */
+    src_mac FixedString(6),
+    dst_mac FixedString(6),
+    src_ip  IPv6,
+    dst_ip  IPv6,
 
-    -- traffic rollups
-    num_packets_state AggregateFunction(count),
-    num_bytes_state   AggregateFunction(sum, UInt64),
-    first_seen_state  AggregateFunction(min, DateTime64(6, 'UTC')),
-    last_seen_state   AggregateFunction(max, DateTime64(6, 'UTC')),
-    protos_state      AggregateFunction(groupUniqArray, UInt8),
+    /* rollups */
+    pkts_state       AggregateFunction(count),
+    bytes_state      AggregateFunction(sum, UInt64),
+    first_seen_state AggregateFunction(min, DateTime64(6, 'UTC')),
+    last_seen_state  AggregateFunction(max, DateTime64(6, 'UTC')),
+    l4_state         AggregateFunction(groupUniqArray, UInt8),
 
-    -- MACs per side (hex strings)
-    node_a_macs_state AggregateFunction(groupUniqArray, FixedString(6)),
-    node_b_macs_state AggregateFunction(groupUniqArray, FixedString(6)),
+    /* ports and L7 from the true source/dest perspective */
+    src_ports_state  AggregateFunction(groupUniqArray, UInt16),
+    dst_ports_state  AggregateFunction(groupUniqArray, UInt16),
 
-    -- Node-A ports only
-    node_a_src_ports_state AggregateFunction(groupUniqArray, UInt16),
-    node_a_dst_ports_state AggregateFunction(groupUniqArray, UInt16),
-
-    -- Node-A app protos (CONCRETE Enum16 — matches packets.l7_proto exactly)
-    node_a_l7_protos_state AggregateFunction(groupUniqArray, Enum16(
+    l7_state AggregateFunction(groupUniqArray, Enum16(
         'UNKNOWN' = 0,
         'SSH'     = 22,
         'SMTP'    = 25,
@@ -41,50 +45,54 @@ CREATE TABLE net.connections_state
         ))
 )
     ENGINE = AggregatingMergeTree
-        ORDER BY (node_a, node_b);
+        ORDER BY (src_mac, dst_mac, src_ip, dst_ip);
 
+/* Materialized view: map each packet into its directed bucket */
 CREATE MATERIALIZED VIEW net.mv_packets_to_connections
             TO net.connections_state
 AS
 SELECT
-    if(src_ip <= dst_ip, src_ip, dst_ip) AS node_a,
-    if(src_ip <= dst_ip, dst_ip, src_ip) AS node_b,
+    minState(ts)                               AS first_seen_state,
+    maxState(ts)                               AS last_seen_state,
+    src_mac,
+    dst_mac,
+    src_ip,
+    dst_ip,
 
-    countState()                           AS num_packets_state,
-    sumState(toUInt64(packet_len))         AS num_bytes_state,
-    minState(ts)                           AS first_seen_state,
-    maxState(ts)                           AS last_seen_state,
-    groupUniqArrayState(toUInt8(l4_proto)) AS protos_state,
+    countState()                               AS pkts_state,
+    sumState(toUInt64(packet_len))             AS bytes_state,
+    groupUniqArrayState(toUInt8(l4_proto))     AS l4_state,
 
-    groupUniqArrayState( if(src_ip <= dst_ip, src_mac, dst_mac) ) AS node_a_macs_state,
-    groupUniqArrayState( if(src_ip <= dst_ip, dst_mac, src_mac) ) AS node_b_macs_state,
+    /* collect both sides explicitly */
+    groupUniqArrayStateIf(assumeNotNull(src_port), src_port IS NOT NULL) AS src_ports_state,
+    groupUniqArrayStateIf(assumeNotNull(dst_port), dst_port IS NOT NULL) AS dst_ports_state,
 
-    groupUniqArrayStateIf(assumeNotNull(src_port), (src_port IS NOT NULL) AND (src_ip <= dst_ip)) AS node_a_src_ports_state,
-    groupUniqArrayStateIf(assumeNotNull(dst_port), (dst_port IS NOT NULL) AND (src_ip  >  dst_ip)) AS node_a_dst_ports_state,
-
-    -- emit the SAME Enum16 as in the state (no casts!)
-    groupUniqArrayStateIf(l7_proto, (src_ip <= dst_ip)) AS node_a_l7_protos_state
+    /* keep the exact Enum16 from packets.l7_proto */
+    groupUniqArrayState(l7_proto)              AS l7_state
 FROM net.packets
-GROUP BY node_a, node_b;
+GROUP BY
+    src_mac, dst_mac, src_ip, dst_ip;
 
+/* User-facing directed view */
 CREATE OR REPLACE VIEW net.connections AS
 SELECT
-    node_a,
-    node_b,
-    countMerge(num_packets_state)                                        AS pkts,
-    sumMerge(num_bytes_state)                                            AS bytes,
-    minMerge(first_seen_state)                                           AS first_seen,
-    maxMerge(last_seen_state)                                            AS last_seen,
-    arraySort(groupUniqArrayMerge(protos_state))                         AS protos,
-    arraySort(arrayDistinct(groupUniqArrayMerge(node_a_macs_state)))     AS node_a_macs,
-    arraySort(arrayDistinct(groupUniqArrayMerge(node_b_macs_state)))     AS node_b_macs,
-    arraySort(arrayDistinct(groupUniqArrayMerge(node_a_src_ports_state))) AS node_a_src_ports,
-    arraySort(arrayDistinct(groupUniqArrayMerge(node_a_dst_ports_state))) AS node_a_dst_ports,
-    arraySort(arrayDistinct(groupUniqArrayMerge(node_a_l7_protos_state))) AS node_a_l7_protos
+    minMerge(first_seen_state)                   AS first_seen,
+    maxMerge(last_seen_state)                    AS last_seen,
+    src_mac,
+    dst_mac,
+    src_ip,
+    dst_ip,
+    countMerge(pkts_state)                       AS pkts,
+    sumMerge(bytes_state)                        AS bytes,
+    arraySort(groupUniqArrayMerge(l4_state))     AS protos,
+    arraySort(arrayDistinct(groupUniqArrayMerge(src_ports_state))) AS src_ports,
+    arraySort(arrayDistinct(groupUniqArrayMerge(dst_ports_state))) AS dst_ports,
+    arraySort(arrayDistinct(groupUniqArrayMerge(l7_state)))        AS l7_protos
 FROM net.connections_state
-GROUP BY node_a, node_b;
+GROUP BY
+    src_mac, dst_mac, src_ip, dst_ip;
 
-/* Ensure helper exists even if packets.sql wasn’t run first */
+/* Pretty formatter for MACs (same helper as before) */
 CREATE FUNCTION IF NOT EXISTS format_mac AS (x) ->
     concat(
             lower(substring(hex(x), 1, 2)),  ':',
@@ -95,19 +103,19 @@ CREATE FUNCTION IF NOT EXISTS format_mac AS (x) ->
             lower(substring(hex(x),11, 2))
     );
 
-/* Readability view: renders arrays of FixedString(6) MACs as colon-strings */
+/* Readable version with colon MACs */
 CREATE OR REPLACE VIEW net.display_connections AS
 SELECT
-    node_a,
-    node_b,
-    pkts,
-    bytes,
     first_seen,
     last_seen,
+    format_mac(src_mac) AS src_mac,
+    format_mac(dst_mac) AS dst_mac,
+    src_ip,
+    dst_ip,
+    pkts,
+    bytes,
     protos,
-    arrayMap(m -> format_mac(m), node_a_macs) AS node_a_macs,
-    arrayMap(m -> format_mac(m), node_b_macs) AS node_b_macs,
-    node_a_src_ports,
-    node_a_dst_ports,
-    node_a_l7_protos
+    src_ports,
+    dst_ports,
+    l7_protos
 FROM net.connections;
