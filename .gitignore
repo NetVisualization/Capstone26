@@ -7,3 +7,9 @@
 # Rust
 **/target/
 **/*.rs.bk
+
+# Network Scans
+scans/*
+
+# System Files
+**/*.DS_Store
