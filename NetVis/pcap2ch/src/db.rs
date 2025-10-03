@@ -1,9 +1,11 @@
 use clickhouse::Row;
 use serde::Serialize;
+use uuid::Uuid;
 
 #[derive(Debug, Serialize, Row)]
 pub struct DbPacket {
     // Physical column order from your DDL (packets.sql)
+    pub packet_id: Uuid,
     pub ts: chrono::DateTime<chrono::Utc>,
     pub src_ip: std::net::Ipv6Addr,
     pub dst_ip: std::net::Ipv6Addr,
@@ -20,6 +22,7 @@ pub struct DbPacket {
 impl DbPacket {
     pub fn from_record_with_info(rec: &pcap2ch::PacketRecord, info: String) -> Self {
         Self {
+            packet_id: Uuid::new_v4(),
             ts: rec.ts,
             src_ip: rec.src_ip,
             dst_ip: rec.dst_ip,
@@ -35,10 +38,25 @@ impl DbPacket {
     }
 }
 
+pub struct DbRawBytes {
+    pub packet_id: Uuid,
+    pub ts: chrono::DateTime<chrono::Utc>,
+    pub bytes: Vec<u8>,
+}
+
 /* ---------- Helpers used by the INSERT VALUES builder ---------- */
 
 pub fn mac_to_hex(m: &[u8; 6]) -> String {
     m.iter().map(|b| format!("{:02X}", b)).collect()
+}
+
+pub fn bytes_to_hex(b: &[u8]) -> String {
+    let mut s = String::with_capacity(b.len() * 2);
+    for byte in b {
+        use std::fmt::Write as _;
+        let _ = write!(&mut s, "{:02x}", byte);
+    }
+    s
 }
 
 pub fn ts_to_str(ts: chrono::DateTime<chrono::Utc>) -> String {

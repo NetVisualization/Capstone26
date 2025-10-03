@@ -13,8 +13,11 @@ pub struct Cli {
     pub ch_db: String,
 
     /// ClickHouse table (must be net.packets)
-    #[arg(long, env = "CH_TABLE", default_value = "net.packets")]
-    pub ch_table: String,
+    #[arg(long, env = "CH_HEAD_TABLE", default_value = "net.packets")]
+    pub ch_head_table: String,
+
+    #[arg(long, env = "CH_RAW_TABLE", default_value = "net.raw_bytes")]
+    pub ch_raw_table: String,
 
     /// ClickHouse user
     #[arg(long, env = "CH_USER", default_value = "default")]

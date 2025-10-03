@@ -4,6 +4,7 @@ DROP TABLE IF EXISTS net.packets;
 
 CREATE TABLE net.packets
 (
+    packet_id UUID DEFAULT generateUUIDv4(),
     ts         DateTime64(6, 'UTC'),
     src_ip     IPv6,
     dst_ip     IPv6,
@@ -38,7 +39,7 @@ CREATE TABLE net.packets
 )
     ENGINE = MergeTree
         PARTITION BY toDate(ts)
-        ORDER BY (ts, src_ip, dst_ip)
+        ORDER BY (ts, src_ip, dst_ip, packet_id)
         SETTINGS index_granularity = 8192;
 
 /* Helper to render FixedString(6) -> "aa:bb:cc:dd:ee:ff" */
@@ -55,6 +56,7 @@ CREATE FUNCTION IF NOT EXISTS format_mac AS (x) ->
 /* Readability view for dashboards & ad-hoc queries */
 CREATE OR REPLACE VIEW net.display_packets AS
 SELECT
+    packet_id,
     ts,
     src_ip,
     dst_ip,

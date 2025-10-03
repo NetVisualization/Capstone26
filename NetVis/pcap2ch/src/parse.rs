@@ -1,23 +1,29 @@
 use anyhow::Result;
+
 use etherparse::SlicedPacket;
 use pcap_parser::pcapng::{Block, PcapNGReader};
 use pcap_parser::traits::PcapReaderIterator; // for next/consume/refill
 use pcap_parser::{LegacyPcapReader, PcapBlockOwned, PcapError};
 use tracing::info;
 
-use crate::db::DbPacket;
+use crate::db::{DbPacket, DbRawBytes};
 use crate::summary::summarize_packet;
 use crate::util::{CaptureFormat, read_all, sniff_format};
 
-pub fn run_file(path: &str, limit: Option<usize>) -> Result<Vec<DbPacket>> {
+pub fn run_file(
+    path: &str,
+    limit: Option<usize>,
+    raw_out: &mut Vec<DbRawBytes>,
+) -> Result<Vec<DbPacket>> {
     let mut buf = read_all(path)?;
     let fmt = sniff_format(&buf)?;
     info!(%path, ?fmt, "detected capture format");
 
     let mut rows = Vec::<DbPacket>::new();
+
     match fmt {
-        CaptureFormat::Pcap => parse_pcap(&mut buf, limit, Some(&mut rows))?,
-        CaptureFormat::PcapNg => parse_pcapng(&mut buf, limit, Some(&mut rows))?,
+        CaptureFormat::Pcap => parse_pcap(&mut buf, limit, Some(&mut rows), Some(raw_out))?,
+        CaptureFormat::PcapNg => parse_pcapng(&mut buf, limit, Some(&mut rows), Some(raw_out))?,
     }
     Ok(rows)
 }
@@ -26,6 +32,7 @@ fn parse_pcap(
     buf: &mut [u8],
     limit: Option<usize>,
     mut sink: Option<&mut Vec<DbPacket>>,
+    mut raw_sink: Option<&mut Vec<DbRawBytes>>,
 ) -> Result<()> {
     let mut r = LegacyPcapReader::new(65536, &buf[..])?;
     let mut seen = 0usize;
@@ -45,9 +52,19 @@ fn parse_pcap(
                     if let Ok(sp) = SlicedPacket::from_ethernet(b.data) {
                         let rec = build_record_from_slice(ts, caplen, origlen, &sp);
                         log_packet_summary(&rec);
+                        let info = summarize_packet(&sp);
+
+                        let pkt = DbPacket::from_record_with_info(&rec, info);
+                        if let Some(ref mut raws) = raw_sink {
+                            raws.push(DbRawBytes {
+                                packet_id: pkt.packet_id,
+                                ts: rec.ts,
+                                bytes: b.data.to_vec(),
+                            });
+                        }
+
                         if let Some(ref mut rows) = sink {
-                            let info = summarize_packet(&sp);
-                            rows.push(DbPacket::from_record_with_info(&rec, info));
+                            rows.push(pkt);
                         }
                         seen += 1;
                     }
@@ -71,6 +88,7 @@ fn parse_pcapng(
     buf: &mut [u8],
     limit: Option<usize>,
     mut sink: Option<&mut Vec<DbPacket>>,
+    mut raw_sink: Option<&mut Vec<DbRawBytes>>,
 ) -> Result<()> {
     let mut r = PcapNGReader::new(65536, &buf[..])?;
     let mut seen = 0usize;
@@ -93,10 +111,22 @@ fn parse_pcapng(
                     if let Ok(sp) = SlicedPacket::from_ethernet(epb.data) {
                         let rec = build_record_from_slice(ts, caplen, origlen, &sp);
                         log_packet_summary(&rec);
-                        if let Some(ref mut rows) = sink {
-                            let info = summarize_packet(&sp);
-                            rows.push(DbPacket::from_record_with_info(&rec, info));
+                        let info = summarize_packet(&sp);
+
+                        let pkt = DbPacket::from_record_with_info(&rec, info);
+
+                        if let Some(ref mut raws) = raw_sink {
+                            raws.push(DbRawBytes {
+                                packet_id: pkt.packet_id,
+                                ts: rec.ts,
+                                bytes: epb.data.to_vec(),
+                            });
                         }
+
+                        if let Some(ref mut rows) = sink {
+                            rows.push(pkt);
+                        }
+
                         seen += 1;
                     }
                 }
@@ -185,6 +215,14 @@ fn build_record_from_slice(
     }
 
     rec
+}
+
+pub fn make_raw_bytes_for(pkt: &DbPacket, bytes: Vec<u8>) -> DbRawBytes {
+    DbRawBytes {
+        packet_id: pkt.packet_id,
+        ts: pkt.ts,
+        bytes,
+    }
 }
 
 fn log_packet_summary(rec: &pcap2ch::PacketRecord) {
