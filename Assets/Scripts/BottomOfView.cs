@@ -10,7 +10,7 @@ public class BottomOfView : MonoBehaviour
 {
     [SerializeField] private Camera cam;
 
-    public float distance = 1.2f;
+    public float distance = 2f;
     public float bottomMargin = -0.75f;
     public float moveSpeed = 10f;
     public float maxTurnDegPerSec = 12f;

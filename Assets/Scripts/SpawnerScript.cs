@@ -136,55 +136,45 @@ public class NodeSpawnerScript : MonoBehaviour
     }
 
 
-
     void MakeConnections()
     {
-        GameObject firstNode = null;
-        GameObject secondNode = null;
         foreach (DBConnection.Connection connection in ConnectionList)
-        {
-            foreach (GameObject node in spawnedNodes)
+        {         
+            GameObject firstNode = null;
+            GameObject secondNode = null;
+
+            int Index = 0;
+            while ((firstNode == null || secondNode == null) && Index < spawnedNodes.Count)
             {
-                NodeInfo info = node.GetComponent<NodeInfo>();
-                if (connection.node_a == info.data.ips[0])
+                NodeInfo info = spawnedNodes[Index].GetComponent<NodeInfo>();
+                Debug.Log(info.data.mac.ToString());
+                if (connection.node_a_macs.Equals(info.data.mac))
                 {
-                    firstNode = node;
+                    firstNode = spawnedNodes[Index];
                 }
-                if (connection.node_b == info.data.ips[0])
+                if (connection.node_b_macs.Equals(info.data.mac))
                 {
-                    secondNode = node;
+                    secondNode = spawnedNodes[Index];
                 }
-            }
-            //makes sure there is a connection between 2 nodes
-            if (firstNode != null && secondNode != null)
-            {
-                GameObject connectionObject = Instantiate(connectionPrefab);
-                ConnectionInfo connInfo = connectionObject.GetComponent<ConnectionInfo>();
-                connInfo.data.node1 = firstNode;
-                connInfo.data.node2 = secondNode;
-                connInfo.Initialize(connection);
+                Index++;
             }
 
+            if (firstNode == null || secondNode == null)
+            {
+                Debug.LogWarning($"Skipping connection between {connection.node_a} and {connection.node_b} because one or both nodes are missing.");
+                continue;  // Skip this connection and move on to the next
+            }
+
+            GameObject connectionObject = Instantiate(connectionPrefab);
+            ConnectionInfo connInfo = connectionObject.GetComponent<ConnectionInfo>();
+            connInfo.data.node1 = firstNode;
+            connInfo.data.node2 = secondNode;
+            connInfo.Initialize(connection);
+
+            ConnectNodes(connectionObject.transform, firstNode.transform, secondNode.transform);
         }
-        //        // Get connected Nodes
-        //        //GameObject firstNode = NodeObjects[NodeIDAddressRel[connection.NodeA_IP]];
-        //        //GameObject secondNode = NodeObjects[NodeIDAddressRel[connection.NodeB_IP]];
+    }
 
-        //        //if (firstNode != null && secondNode != null)
-        //        //{
-        //        //  if (!ConnectionObjects.ContainsKey(connection._id.oid))
-        //        //{
-        //        // Create a new GameObject based on the prefab
-        //        GameObject connectionObject = Instantiate(connectionPrefab);
-        //        connectionObject.GetComponent<ConnectionData>().Id = connection._id.oid;
-        //        connectionObject.GetComponent<ConnectionData>().NodeA = firstNode;
-        //        connectionObject.GetComponent<ConnectionData>().NodeB = secondNode;
-        //        connectionObject.GetComponent<ConnectionData>().NumPackets = connection.NumPackets;
-
-        //        ConnectionObjects.Add(connection._id.oid, connectionObject);
-        //    }
-        //}
-             }
 
     void UpdateConnections()
     {
@@ -281,10 +271,26 @@ public class NodeSpawnerScript : MonoBehaviour
 
         return v;
     }
-    public void connection(Transform connection, Transform a, Transform b)
+    public void ConnectNodes(Transform connection, Transform a, Transform b)
     {
+        if (a == null || b == null)
+        {
+            Debug.LogWarning("One or both transforms are null!");
+            return;
+        }
+        float thickness = 0.05f;
         Vector3 posA = a.position;
         Vector3 posB = b.position;
+
+        Vector3 dir = posB - posA;
+        float length = dir.magnitude;
+
+        connection.position = (posA + posB) * 0.5f;
+
+        connection.rotation = Quaternion.LookRotation(dir);
+
+        connection.localScale = new Vector3(thickness, thickness, length);
+        Debug.DrawLine(posA, posB, Color.green, 100f);
     }
 }
 

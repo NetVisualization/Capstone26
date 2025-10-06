@@ -99,8 +99,8 @@ public class DBConnection : MonoBehaviour
         public DateTime first_seen;
         public DateTime last_seen;
         public List<l4_proto> protos;
-        public List<PhysicalAddress> node_a_macs;
-        public List<PhysicalAddress> node_b_macs;
+        public PhysicalAddress node_a_macs;
+        public PhysicalAddress node_b_macs;
         public ushort[] node_a_src_ports;
         public ushort[] node_a_dst_ports;
         public List<l7_proto> node_a_l7_protos;
@@ -277,8 +277,14 @@ public class DBConnection : MonoBehaviour
         while (reader.Read())
         {
             Node dbRecord = new Node();
-            string macFromDb = Convert.ToString(reader.GetValue(reader.GetOrdinal("mac")));
-            //dbRecord.mac = PhysicalAddress.Parse(macFromDb);
+            string raw = reader.GetString(reader.GetOrdinal("mac"));
+            byte[] macBytes = new byte[6];
+            for (int i = 0; i < 6; i++)
+            {
+                macBytes[i] = (byte)raw[i];
+            }
+
+            dbRecord.mac = new System.Net.NetworkInformation.PhysicalAddress(macBytes);
             dbRecord.pkts = Convert.ToInt32(reader.GetValue(reader.GetOrdinal("pkts")));
             dbRecord.bytes = Convert.ToInt32(reader.GetValue(reader.GetOrdinal("bytes")));
             dbRecord.first_seen = reader.GetDateTime(reader.GetOrdinal("first_seen"));
@@ -316,25 +322,42 @@ public class DBConnection : MonoBehaviour
         while (reader.Read())
         {
             Connection dbRecord = new Connection();
-            dbRecord.node_a = (IPAddress)reader.GetValue(reader.GetOrdinal("node_a"));
-            dbRecord.node_b = (IPAddress)reader.GetValue(reader.GetOrdinal("node_a"));
-            dbRecord.pkts = Convert.ToInt32(reader.GetValue(reader.GetOrdinal("pkts")));
-            dbRecord.bytes = Convert.ToInt32(reader.GetValue(reader.GetOrdinal("bytes")));
-            dbRecord.first_seen = reader.GetDateTime(reader.GetOrdinal("first_seen"));
-            dbRecord.last_seen = reader.GetDateTime(reader.GetOrdinal("last_seen"));
+            dbRecord.node_a = (IPAddress)reader.GetValue(reader.GetOrdinal("src_ip"));
+            dbRecord.node_b = (IPAddress)reader.GetValue(reader.GetOrdinal("dst_ip"));
+            //dbRecord.pkts = Convert.ToInt32(reader.GetValue(reader.GetOrdinal("packet_len")));
+            //dbRecord.bytes = Convert.ToInt32(reader.GetValue(reader.GetOrdinal("bytes")));
+            //dbRecord.first_seen = reader.GetDateTime(reader.GetOrdinal("first_seen"));
+            //dbRecord.last_seen = reader.GetDateTime(reader.GetOrdinal("last_seen"));
             dbRecord.protos = new List<l4_proto>();
-            byte[] l4s = (byte[])reader.GetValue(reader.GetOrdinal("protos"));
-            foreach (byte l4 in l4s) dbRecord.protos.Add((l4_proto)l4);
-            //dbRecord.node_a_macs = new List<PhysicalAddress>();
-            //string[] macsFromDb = (string[])reader.GetValue(reader.GetOrdinal("node_a_macs"));
-            //foreach (string mac in macsFromDb) dbRecord.node_a_macs.Add(PhysicalAddress.Parse(mac));
-            //dbRecord.node_b_macs = new List<PhysicalAddress>();
-            //macsFromDb = (string[])reader.GetValue(reader.GetOrdinal("node_a_macs"));
-            //foreach (string mac in macsFromDb) dbRecord.node_b_macs.Add(PhysicalAddress.Parse(mac));
-            dbRecord.node_a_src_ports = (ushort[])reader.GetValue(reader.GetOrdinal("node_a_src_ports"));
-            dbRecord.node_a_dst_ports = (ushort[])reader.GetValue(reader.GetOrdinal("node_a_dst_ports"));
-            String[] l7s = (String[])reader.GetValue(reader.GetOrdinal("node_a_l7_protos"));
-            dbRecord.node_a_l7_protos = StringArrayToAppLayerList(l7s);
+            //byte[] l4s = (byte[])reader.GetValue(reader.GetOrdinal("l4_proto"));
+            string raw = reader.GetString(reader.GetOrdinal("src_mac"));
+            byte[] macBytes = new byte[6];
+            for (int i = 0; i < 6; i++)
+            {
+                macBytes[i] = (byte)raw[i];
+            }
+
+            dbRecord.node_a_macs = new System.Net.NetworkInformation.PhysicalAddress(macBytes);
+            if(dbRecord.node_a_macs == null)
+            {
+                Debug.Log("Null");
+            }
+            raw = reader.GetString(reader.GetOrdinal("dst_mac"));
+            macBytes = new byte[6];
+            for (int i = 0; i < 6; i++)
+            {
+                macBytes[i] = (byte)raw[i];
+            }
+
+            dbRecord.node_b_macs = new System.Net.NetworkInformation.PhysicalAddress(macBytes);
+            if (dbRecord.node_a_macs == null)
+            {
+                Debug.Log("Null");
+            }
+            //dbRecord.node_a_src_ports = (ushort[])reader.GetValue(reader.GetOrdinal("src_port"));
+            //dbRecord.node_a_dst_ports = (ushort[])reader.GetValue(reader.GetOrdinal("dst_port"));
+            //String[] l7s = (String[])reader.GetValue(reader.GetOrdinal("l7_proto"));
+            //dbRecord.node_a_l7_protos = StringArrayToAppLayerList(l7s);
 
             conns.Add(dbRecord);
         }

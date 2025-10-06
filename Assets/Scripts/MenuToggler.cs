@@ -21,6 +21,7 @@ public class MenuToggler : MonoBehaviour
         {
             bool newstate = !targetMenu.activeSelf;
             targetMenu.SetActive(newstate);
+            Debug.Log("Pannel Clicked");
         }
     }
 }
