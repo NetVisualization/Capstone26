@@ -50,6 +50,7 @@ pub enum Cmd {
     },
     /// Live capture (to be implemented later)
     Live {
+        #[arg(long)]
         iface: String,
         #[arg(long)]
         filter: Option<String>,

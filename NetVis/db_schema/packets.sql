@@ -16,11 +16,11 @@ CREATE TABLE net.packets
     l7_proto Enum16(
         'UNKNOWN' = 0,
         'HTTP'    = 80,
-        'TLS'     = 443,   -- generic TLS (HTTPS/DoT/etc.)
+        'TLS'     = 443,
         'DNS'     = 53,
         'MDNS'    = 5353,
         'SSDP'    = 1900,
-        'DHCP'    = 67,    -- 67/68
+        'DHCP'    = 67,
         'NTP'     = 123,
         'SSH'     = 22,
         'SMTP'    = 25,

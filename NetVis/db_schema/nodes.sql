@@ -1,5 +1,10 @@
 CREATE DATABASE IF NOT EXISTS net;
 
+DROP TABLE IF EXISTS net.nodes_state;
+DROP VIEW IF EXISTS net.mv_packets_to_nodes;
+DROP TABLE IF EXISTS net.display_nodes;
+DROP TABLE IF EXISTS net.nodes;
+
 CREATE TABLE net.nodes_state
 (
     mac FixedString(6),

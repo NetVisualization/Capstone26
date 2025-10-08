@@ -61,6 +61,8 @@ async fn main() -> anyhow::Result<()> {
                 ch_db: args.ch_db,
                 ch_head_table: args.ch_head_table,
                 ch_raw_table: args.ch_raw_table,
+                ch_user: args.ch_user,
+                ch_password: args.ch_password,
             };
             live::run(opts).await?;
         }
