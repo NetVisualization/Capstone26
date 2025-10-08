@@ -26,7 +26,7 @@ CREATE TABLE net.packets
         'SMTP'    = 25,
         'IMAP'    = 143,
         'POP3'    = 110,
-        'QUIC'    = 1000,  -- custom code to avoid port collisions
+        'QUIC'    = 1000,
         'SMB'     = 445,
         'RDP'     = 3389
         ) DEFAULT 'UNKNOWN',

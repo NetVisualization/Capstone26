@@ -1,10 +1,11 @@
 mod cli;
-mod db; // keep your existing db.rs
+mod db;
 mod ingest;
+mod live;
 mod parse;
 
 mod summary;
-mod util; // keep your existing lib.rs types
+mod util;
 
 use clap::Parser;
 use clickhouse::Client;
@@ -49,7 +50,19 @@ async fn main() -> anyhow::Result<()> {
             snaplen,
             batch_size,
         } => {
-            tracing::info!(%iface, ?filter, snaplen, batch_size, "live mode (todo)");
+            tracing::info!(%iface, ?filter, snaplen, batch_size, "starting live capture");
+
+            let opts = live::LiveOpts {
+                iface,
+                filter,
+                snaplen,
+                batch_size,
+                ch_url: args.ch_url,
+                ch_db: args.ch_db,
+                ch_head_table: args.ch_head_table,
+                ch_raw_table: args.ch_raw_table,
+            };
+            live::run(opts).await?;
         }
     }
 

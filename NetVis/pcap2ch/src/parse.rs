@@ -9,6 +9,28 @@ use tracing::info;
 use crate::db::{DbPacket, DbRawBytes};
 use crate::summary::summarize_packet;
 use crate::util::{CaptureFormat, read_all, sniff_format};
+use chrono::{DateTime, Utc};
+
+pub fn parse_frame_to_records(ts: DateTime<Utc>, bytes: &[u8]) -> Option<(DbPacket, DbRawBytes)> {
+    let sp = SlicedPacket::from_ethernet(bytes).ok()?;
+
+    let caplen = bytes.len() as u32;
+    let origlen = caplen;
+    let rec = build_record_from_slice(ts, caplen, origlen, &sp);
+
+    let info = summarize_packet(&sp);
+
+    // Generate the UUID here (inside DbPacket::from_record_with_info)
+    let pkt = DbPacket::from_record_with_info(&rec, info);
+
+    let raw = DbRawBytes {
+        packet_id: pkt.packet_id,
+        ts: pkt.ts,
+        bytes: bytes.to_vec(),
+    };
+
+    Some((pkt, raw))
+}
 
 pub fn run_file(
     path: &str,
@@ -215,14 +237,6 @@ fn build_record_from_slice(
     }
 
     rec
-}
-
-pub fn make_raw_bytes_for(pkt: &DbPacket, bytes: Vec<u8>) -> DbRawBytes {
-    DbRawBytes {
-        packet_id: pkt.packet_id,
-        ts: pkt.ts,
-        bytes,
-    }
 }
 
 fn log_packet_summary(rec: &pcap2ch::PacketRecord) {
