@@ -46,23 +46,34 @@ pub async fn run(opts: LiveOpts) -> Result<()> {
 
     // Stop flag (q + Enter or Ctrl-C)
     let stop = Arc::new(AtomicBool::new(false));
-    {
-        let stop = stop.clone();
-        std::thread::spawn(move || {
-            eprintln!("Press 'q' then Enter to stop…");
-            for b in std::io::stdin().bytes() {
-                if matches!(b, Ok(b'q') | Ok(b'Q')) {
-                    stop.store(true, Ordering::Relaxed);
-                    break;
-                }
-            }
-        });
-    }
+    // Handle Ctrl-C and 'q' + Enter to stop (async-safe)
     {
         let stop = stop.clone();
         tokio::spawn(async move {
-            let _ = tokio::signal::ctrl_c().await;
-            stop.store(true, Ordering::Relaxed);
+            use tokio::io::{self, AsyncBufReadExt};
+            let mut stdin = io::BufReader::new(io::stdin());
+            let mut line = String::new();
+
+            tracing::info!("Press 'q' then Enter or Ctrl-C to stop capture...");
+            tokio::select! {
+                _ = tokio::signal::ctrl_c() => {
+                    tracing::info!("Ctrl-C detected, stopping capture...");
+                    stop.store(true, Ordering::Relaxed);
+                }
+                _ = async {
+                    loop {
+                        line.clear();
+                        if stdin.read_line(&mut line).await.is_err() {
+                            break;
+                        }
+                        if line.trim().eq_ignore_ascii_case("q") {
+                            tracing::info!("'q' pressed, stopping capture...");
+                            stop.store(true, Ordering::Relaxed);
+                            break;
+                        }
+                    }
+                } => {}
+            }
         });
     }
 
@@ -77,8 +88,8 @@ pub async fn run(opts: LiveOpts) -> Result<()> {
     let snaplen = opts.snaplen;
     let stop_for_cap = stop.clone();
     let cap_thread = std::thread::spawn(move || {
-        let res = capture_loop(iface, filter, snaplen, tx, stop_for_cap);
-        let _ = init_tx.send(res.map(|_| ()));
+        // pass init_tx into capture_loop so it can signal *once it's ready*
+        let _ = capture_loop(iface, filter, snaplen, tx, stop_for_cap, Some(init_tx));
     });
 
     // Wait for capture init
@@ -123,10 +134,11 @@ fn capture_loop(
     iface: String,
     filter: Option<String>,
     snaplen: i32,
-    tx: mpsc::Sender<CapturedFrame>,
+    tx: tokio::sync::mpsc::Sender<CapturedFrame>,
     stop: Arc<AtomicBool>,
-) -> Result<()> {
-    // Build and open the capture handle
+    init_tx: Option<std::sync::mpsc::Sender<anyhow::Result<()>>>, // NEW
+) -> anyhow::Result<()> {
+    // Build & open
     let mut cap = {
         let inactive = if iface.is_empty() {
             let dev =
@@ -146,16 +158,12 @@ fn capture_loop(
             .open()?
     };
 
-    // Log datalink to catch loopback/non-ethernet mistakes
+    cap = cap.setnonblock()?;
+    // Datalink log (optional)
     let dl = cap.get_datalink();
     tracing::info!("live: datalink = {:?}", dl);
-    if dl != Linktype(1) {
-        tracing::warn!(
-            "live: non-Ethernet datalink {:?}; parse(from_ethernet) will drop frames on this iface",
-            dl
-        );
-    }
 
+    // Apply BPF (propagate errors to main)
     if let Some(f) = filter {
         cap.filter(&f, true)?;
         tracing::info!(filter=%f, "live: BPF filter set");
@@ -163,20 +171,22 @@ fn capture_loop(
         tracing::info!("live: no BPF filter");
     }
 
+    // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+    // Tell main thread we are READY so it can start the worker immediately.
+    if let Some(tx_ready) = &init_tx {
+        let _ = tx_ready.send(Ok(()));
+    }
     tracing::info!("live: capture started (press 'q' + Enter or Ctrl-C to stop)");
+    // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
+    // Read loop
     let mut cap_count: u64 = 0;
-    loop {
-        if stop.load(Ordering::Relaxed) {
-            tracing::info!("live: stop flag set, exiting capture loop");
-            break;
-        }
-
+    while !stop.load(Ordering::Relaxed) {
         match cap.next_packet() {
             Ok(pkt) => {
-                // Use libpcap timestamp if present, else fallback to now()
-                #[allow(deprecated)]
+                // ... your timestamp & send code ...
                 let ts: DateTime<Utc> = {
+                    #[allow(deprecated)]
                     let secs = pkt.header.ts.tv_sec as i64;
                     let usec = pkt.header.ts.tv_usec as u32;
                     let nanos = (usec as u64) * 1000;
@@ -185,23 +195,35 @@ fn capture_loop(
                         .single()
                         .unwrap_or_else(|| chrono::Utc::now())
                 };
-
                 let data = Bytes::copy_from_slice(pkt.data);
-
                 if tx.blocking_send(CapturedFrame { ts, data }).is_err() {
                     tracing::warn!("live: worker receiver closed; stopping capture");
                     break;
                 }
-
                 cap_count += 1;
                 if cap_count % 50 == 0 {
                     tracing::info!(cap_count, "live: captured frames");
                 }
             }
-            Err(pcap::Error::TimeoutExpired) => continue,
-            Err(e) => return Err(e.into()),
+
+            // Non-blocking: no packet ready right now; yield briefly.
+            Err(pcap::Error::NoMorePackets) | Err(pcap::Error::TimeoutExpired) => {
+                std::thread::sleep(Duration::from_millis(10));
+                continue;
+            }
+
+            Err(e) => {
+                // If error occurs after init, propagate/log and exit
+                if let Some(tx_ready) = &init_tx {
+                    let _ = tx_ready.send(Err(anyhow::anyhow!(e.to_string())));
+                }
+                return Err(e.into());
+            }
         }
     }
+
+    tracing::info!("live: exiting capture loop");
+    drop(tx); // close channel so worker_loop sees EOF and flushes
     Ok(())
 }
 
