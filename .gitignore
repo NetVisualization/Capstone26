@@ -13,3 +13,6 @@ scans/*
 
 # System Files
 **/*.DS_Store
+
+# Env
+**/.env
