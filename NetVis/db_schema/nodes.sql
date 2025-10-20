@@ -21,23 +21,7 @@ CREATE TABLE net.nodes_state
     src_ports_state AggregateFunction(groupUniqArray, UInt16),
 
     -- app protos (CONCRETE Enum16 — same list as above)
-    l7_protos_state AggregateFunction(groupUniqArray, Enum16(
-        'UNKNOWN' = 0,
-        'SSH'     = 22,
-        'SMTP'    = 25,
-        'DNS'     = 53,
-        'DHCP'    = 67,
-        'HTTP'    = 80,
-        'POP3'    = 110,
-        'NTP'     = 123,
-        'IMAP'    = 143,
-        'TLS'     = 443,
-        'SMB'     = 445,
-        'QUIC'    = 1000,
-        'SSDP'    = 1900,
-        'RDP'     = 3389,
-        'MDNS'    = 5353
-        )),
+    l7_protos_state AggregateFunction(groupUniqArray, UInt16),
 
     device_type LowCardinality(Nullable(String)) DEFAULT NULL
 )

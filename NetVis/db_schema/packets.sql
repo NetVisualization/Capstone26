@@ -11,25 +11,9 @@ CREATE TABLE net.packets
     src_mac    FixedString(6),
     dst_mac    FixedString(6),
 
-    l4_proto   Enum16('NONE' = 0, 'ICMP' = 1, 'TCP' = 6, 'UDP' = 17, 'SCTP' = 132),
+    l4_proto Enum16('NONE' = 0, 'ICMP' = 1, 'TCP' = 6, 'UDP' = 17, 'SCTP' = 132),
 
-    l7_proto Enum16(
-        'UNKNOWN' = 0,
-        'HTTP'    = 80,
-        'TLS'     = 443,
-        'DNS'     = 53,
-        'MDNS'    = 5353,
-        'SSDP'    = 1900,
-        'DHCP'    = 67,
-        'NTP'     = 123,
-        'SSH'     = 22,
-        'SMTP'    = 25,
-        'IMAP'    = 143,
-        'POP3'    = 110,
-        'QUIC'    = 1000,
-        'SMB'     = 445,
-        'RDP'     = 3389
-        ) DEFAULT 'UNKNOWN',
+    l7_proto UInt16 DEFAULT 0,
 
     src_port   Nullable(UInt16),
     dst_port   Nullable(UInt16),

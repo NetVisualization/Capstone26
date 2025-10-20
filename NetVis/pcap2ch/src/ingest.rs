@@ -1,10 +1,7 @@
 use anyhow::{Ok, Result};
 use clickhouse::Client;
 
-use crate::db::{
-    DbPacket, DbRawBytes, bytes_to_hex, l4_label_from_code, l7_label_from_code, mac_to_hex,
-    ts_to_str,
-};
+use crate::db::{DbPacket, DbRawBytes, bytes_to_hex, l4_label_from_code, mac_to_hex, ts_to_str};
 use crate::util::escape_sql_single_quotes;
 
 pub async fn run_file_and_insert(
@@ -36,7 +33,7 @@ pub async fn run_file_and_insert(
             let src_mac_hex = mac_to_hex(&row.src_mac);
             let dst_mac_hex = mac_to_hex(&row.dst_mac);
             let l4 = l4_label_from_code(row.l4_proto);
-            let l7 = l7_label_from_code(row.l7_proto);
+            let l7 = row.l7_proto as u16;
 
             let src_port_lit = row
                 .src_port

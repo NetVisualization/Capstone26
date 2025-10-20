@@ -2,13 +2,11 @@ use anyhow::Result;
 use bytes::Bytes;
 use chrono::TimeZone;
 use chrono::{DateTime, Utc};
-use pcap::{Capture, Device, Linktype};
-use std::io::Read;
+use pcap::{Capture, Device};
 use std::sync::{
     Arc,
     atomic::{AtomicBool, Ordering},
 };
-use std::time::SystemTime;
 use tokio::sync::mpsc;
 use tokio::time::{Duration, interval};
 

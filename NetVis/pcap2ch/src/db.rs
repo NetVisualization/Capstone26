@@ -74,24 +74,3 @@ pub fn l4_label_from_code(v: i16) -> &'static str {
         _ => "NONE",
     }
 }
-
-pub fn l7_label_from_code(v: i16) -> &'static str {
-    match v {
-        0 => "UNKNOWN",
-        22 => "SSH",
-        25 => "SMTP",
-        53 => "DNS",
-        67 => "DHCP",
-        80 => "HTTP",
-        110 => "POP3",
-        123 => "NTP",
-        143 => "IMAP",
-        443 => "TLS",
-        445 => "SMB",
-        1000 => "QUIC",
-        1900 => "SSDP",
-        3389 => "RDP",
-        5353 => "MDNS",
-        _ => "UNKNOWN",
-    }
-}

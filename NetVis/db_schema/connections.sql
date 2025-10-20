@@ -26,23 +26,7 @@ CREATE TABLE net.connections_state
     src_ports_state  AggregateFunction(groupUniqArray, UInt16),
     dst_ports_state  AggregateFunction(groupUniqArray, UInt16),
 
-    l7_state AggregateFunction(groupUniqArray, Enum16(
-        'UNKNOWN' = 0,
-        'SSH'     = 22,
-        'SMTP'    = 25,
-        'DNS'     = 53,
-        'DHCP'    = 67,
-        'HTTP'    = 80,
-        'POP3'    = 110,
-        'NTP'     = 123,
-        'IMAP'    = 143,
-        'TLS'     = 443,
-        'SMB'     = 445,
-        'QUIC'    = 1000,
-        'SSDP'    = 1900,
-        'RDP'     = 3389,
-        'MDNS'    = 5353
-        ))
+    l7_state AggregateFunction(groupUniqArray, UInt16)
 )
     ENGINE = AggregatingMergeTree
         ORDER BY (src_mac, dst_mac, src_ip, dst_ip);
