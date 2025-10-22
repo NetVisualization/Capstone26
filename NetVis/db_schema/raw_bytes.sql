@@ -6,8 +6,8 @@ DROP TABLE IF EXISTS net.raw_bytes;
 CREATE TABLE net.raw_bytes
 (
     packet_id UUID,                               -- must match net.packets.packet_id
-    ts        DateTime64(6, 'UTC'),               -- keeps partitioning/time scans efficient
-    bytes     String CODEC(ZSTD(6))               -- raw binary blob (full frame including payload)
+    ts DateTime64(6, 'UTC'),               -- keeps partitioning/time scans efficient
+    bytes String CODEC(ZSTD(6))               -- raw binary blob (full frame including payload)
 )
 ENGINE = MergeTree
     PARTITION BY toDate(ts)
