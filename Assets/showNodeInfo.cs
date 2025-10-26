@@ -15,6 +15,14 @@ public class showNodeInfo : MonoBehaviour
     {
         if (!pannel) pannel = FindObjectOfType<InfoPannelController>(true);
         interactable = GetComponent<XRBaseInteractable>();
+        if (pannel)
+        {
+            Debug.Log("Found panel");
+        }
+        else
+        {
+            Debug.Log("Pannel not found");
+        }
     }
     private void OnEnable()
     {

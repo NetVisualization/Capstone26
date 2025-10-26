@@ -4,9 +4,9 @@ using UnityEngine;
 
 public class ConnectionInfo : MonoBehaviour
 {
-    public DBConnection.Connection data;
+    public DBConnection.SubConnection data;
 
-    public void Initialize(DBConnection.Connection node)
+    public void Initialize(DBConnection.SubConnection node)
     {
         data = node;
     }

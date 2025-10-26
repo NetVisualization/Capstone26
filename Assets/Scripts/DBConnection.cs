@@ -26,52 +26,6 @@ using System.Net.NetworkInformation;
 public class DBConnection : MonoBehaviour
 {
 
-    public enum l2_proto : byte
-    {
-        ETHERNET = 1,
-        ARP = 2,
-        PPPoE = 3,
-        IEEE802_11 = 4,
-        OTHER = 127
-    }
-
-    public enum l3_proto : byte
-    {
-        IPv4 = 1,
-        IPv6 = 2,
-        MPLS = 3,
-        ARP = 4,
-        NON_IP = 127
-    }
-
-    public enum l4_proto : ushort
-    {
-        NONE = 0,
-        ICMP = 1,
-        TCP = 6,
-        UDP = 17,
-        SCTP = 132
-    }
-
-    public enum l7_proto : ushort
-    {
-        UNKNOWN = 0,
-        SSH = 22,
-        SMTP = 25,
-        DNS = 53,
-        DHCP = 67,
-        HTTP = 80,
-        POP3 = 110,
-        NTP = 123,
-        IMAP = 143,
-        TLS = 443,
-        SMB = 445,
-        QUIC = 1000,
-        SSDP = 1900,
-        RDP = 3389,
-        MDNS = 5353
-    }
-
     // Database Node Object (Get)
     [System.Serializable]
     public struct Node
@@ -82,7 +36,7 @@ public class DBConnection : MonoBehaviour
         public DateTime first_seen;
         public DateTime last_seen;
         public int degree;
-        public IPAddress[] ips;
+        public List<IPAddress> ips;
         public ushort[] src_ports;
         public List<l7_proto> l7_protos;
         public string device_type;
@@ -92,8 +46,8 @@ public class DBConnection : MonoBehaviour
     [Serializable]
     public struct Connection
     {
-        public IPAddress node_a;
-        public IPAddress node_b;
+        public List<IPAddress> node_a;
+        public List<IPAddress> node_b;
         public int pkts;
         public int bytes;
         public DateTime first_seen;
@@ -104,6 +58,20 @@ public class DBConnection : MonoBehaviour
         public ushort[] node_a_src_ports;
         public ushort[] node_a_dst_ports;
         public List<l7_proto> node_a_l7_protos;
+        public GameObject node1;
+        public GameObject node2;
+    }
+    // Sub-connection where everything is divided by protocol (Get)
+    public struct SubConnection
+    {
+        public List<IPAddress> node_a;
+        public List<IPAddress> node_b;
+        public PhysicalAddress node_a_macs;
+        public PhysicalAddress node_b_macs;
+        public l7_proto protocol;
+        public int pkts;
+        public int bytes;
+        public DateTime first_seen;
         public GameObject node1;
         public GameObject node2;
     }
@@ -247,11 +215,12 @@ public class DBConnection : MonoBehaviour
         return Convert.ToInt32(result);
     }
 
-    public List<l7_proto> StringArrayToAppLayerList(String[] strings)
+    public List<l7_proto> intArrayToAppLayerList(UInt16[] ints)
     {
         List<l7_proto> myAppLayerValues = new List<l7_proto>();
-        foreach (var s in strings) {
-            l7_proto currentProto = (l7_proto)Enum.Parse(typeof(l7_proto), s);
+        foreach (var i in ints)
+        {
+            l7_proto currentProto = (l7_proto)i;
             myAppLayerValues.Add(currentProto);
         }
         return myAppLayerValues;
@@ -263,8 +232,21 @@ public class DBConnection : MonoBehaviour
     public List<Node> getNodesAfter(DateTime time)
     {
         using var cmd = _connection.CreateCommand();
-        cmd.CommandText = "SELECT * FROM nodes WHERE nodes.first_seen > toDateTime(@time);";
-
+        //cmd.CommandText = "SELECT * FROM nodes WHERE nodes.first_seen > toDateTime(@time);";
+        cmd.CommandText = @"
+        SELECT
+            hex(mac) AS mac_hex,
+            pkts,
+            bytes,
+            first_seen,
+            last_seen,
+            degree,
+            ips,
+            src_ports,
+            l7_protos,
+            device_type
+        FROM nodes
+        WHERE nodes.first_seen > toDateTime(@time);";
         cmd.Parameters.Add(new ClickHouseDbParameter
         {
             ParameterName = "time",
@@ -277,26 +259,22 @@ public class DBConnection : MonoBehaviour
         while (reader.Read())
         {
             Node dbRecord = new Node();
-            string raw = reader.GetString(reader.GetOrdinal("mac"));
-            byte[] macBytes = new byte[6];
-            for (int i = 0; i < 6; i++)
-            {
-                macBytes[i] = (byte)raw[i];
-            }
-
-            dbRecord.mac = new System.Net.NetworkInformation.PhysicalAddress(macBytes);
+            string macHex = reader.GetString(reader.GetOrdinal("mac_hex"));
+            dbRecord.mac = System.Net.NetworkInformation.PhysicalAddress.Parse(macHex);
             dbRecord.pkts = Convert.ToInt32(reader.GetValue(reader.GetOrdinal("pkts")));
             dbRecord.bytes = Convert.ToInt32(reader.GetValue(reader.GetOrdinal("bytes")));
             dbRecord.first_seen = reader.GetDateTime(reader.GetOrdinal("first_seen"));
             dbRecord.last_seen = reader.GetDateTime(reader.GetOrdinal("last_seen"));
             dbRecord.degree = Convert.ToInt32(reader.GetValue(reader.GetOrdinal("degree")));
-            dbRecord.ips = (IPAddress[])reader.GetValue(reader.GetOrdinal("ips"));
+            var ips = (System.Net.IPAddress[])reader["ips"];
+            dbRecord.ips = ips.ToList();
             dbRecord.src_ports = (ushort[])reader.GetValue(reader.GetOrdinal("src_ports"));
-            String[] l7s = (String[])reader.GetValue(reader.GetOrdinal("l7_protos"));
-            dbRecord.l7_protos = StringArrayToAppLayerList(l7s);
+            UInt16[] l7s = (UInt16[])reader.GetValue(reader.GetOrdinal("l7_protos"));
+            dbRecord.l7_protos = intArrayToAppLayerList(l7s);
             dbRecord.device_type = Convert.ToString(reader.GetValue(reader.GetOrdinal("device_type")));
 
             nodes.Add(dbRecord);
+            Debug.Log(dbRecord.mac);
         }
 
         return nodes;
@@ -308,7 +286,35 @@ public class DBConnection : MonoBehaviour
     public List<Connection> getConnectionsAfter(DateTime time)
     {
         using var cmd = _connection.CreateCommand();
-        cmd.CommandText = "SELECT * FROM connections WHERE connections.first_seen > toDateTime(@time);";
+        // cmd.CommandText = "SELECT * FROM connections WHERE connections.first_seen > toDateTime(@time);";
+
+        cmd.CommandText = @"SELECT
+                LEAST(hex(src_mac),hex(dst_mac)) AS mac_a,
+                groupUniqArray(if(src_mac <= dst_mac, src_ip, dst_ip)) AS ip_a,
+                GREATEST(hex(src_mac), hex(dst_mac)) AS mac_b,
+                groupUniqArray(if(src_mac <= dst_mac, dst_ip, src_ip)) AS ip_b,
+                MIN(first_seen) AS first_seen,
+                MAX(last_seen) AS last_seen,
+                SUM(pkts) AS pkts,
+                SUM(bytes) AS bytes,
+            
+                -- Aggregate ports for each node
+                arrayDistinct(arrayFlatten(groupArrayArray(if(src_mac <= dst_mac, src_ports, dst_ports)))) AS ports_a,
+                arrayDistinct(arrayFlatten(groupArrayArray(if(src_mac <= dst_mac, dst_ports, src_ports)))) AS ports_b,
+                -- Get L7 protocols for each side of the connection
+                arrayDistinct(arrayFlatten(groupArrayArray(if(src_mac <= dst_mac, l7_protos, l7_protos)))) AS l7_protos_a,
+                -- Conditionally aggregate L7 protocols for mac_b
+                arrayDistinct(arrayFlatten(groupArrayArray(if(src_mac <= dst_mac, l7_protos, l7_protos)))) AS l7_protos_b,
+
+                -- Aggregate distinct L3 protocols (connection-wide)
+                arrayDistinct(arrayFlatten(groupArrayArray(protos))) AS protos
+            FROM
+                connections
+            WHERE 
+                connections.first_seen > toDateTime(@time)
+            GROUP BY
+                mac_a,
+                mac_b;";
 
         cmd.Parameters.Add(new ClickHouseDbParameter
         {
@@ -322,46 +328,67 @@ public class DBConnection : MonoBehaviour
         while (reader.Read())
         {
             Connection dbRecord = new Connection();
-            dbRecord.node_a = (IPAddress)reader.GetValue(reader.GetOrdinal("src_ip"));
-            dbRecord.node_b = (IPAddress)reader.GetValue(reader.GetOrdinal("dst_ip"));
-            //dbRecord.pkts = Convert.ToInt32(reader.GetValue(reader.GetOrdinal("packet_len")));
-            //dbRecord.bytes = Convert.ToInt32(reader.GetValue(reader.GetOrdinal("bytes")));
-            //dbRecord.first_seen = reader.GetDateTime(reader.GetOrdinal("first_seen"));
-            //dbRecord.last_seen = reader.GetDateTime(reader.GetOrdinal("last_seen"));
+            var ips = (System.Net.IPAddress[])reader["ip_a"];
+            dbRecord.node_a = ips.ToList();
+            ips = (System.Net.IPAddress[])reader["ip_b"];
+            dbRecord.node_b = ips.ToList();
+            //dbRecord.node_a = (List<IPAddress>)reader.GetValue(reader.GetOrdinal("ip_a"));
+            //dbRecord.node_b = (List<IPAddress>)reader.GetValue(reader.GetOrdinal("ip_b"));
+            dbRecord.pkts = Convert.ToInt32(reader.GetValue(reader.GetOrdinal("pkts")));
+            dbRecord.bytes = Convert.ToInt32(reader.GetValue(reader.GetOrdinal("bytes")));
+            dbRecord.first_seen = reader.GetDateTime(reader.GetOrdinal("first_seen"));
+            dbRecord.last_seen = reader.GetDateTime(reader.GetOrdinal("last_seen"));
             dbRecord.protos = new List<l4_proto>();
-            //byte[] l4s = (byte[])reader.GetValue(reader.GetOrdinal("l4_proto"));
-            string raw = reader.GetString(reader.GetOrdinal("src_mac"));
-            byte[] macBytes = new byte[6];
-            for (int i = 0; i < 6; i++)
-            {
-                macBytes[i] = (byte)raw[i];
-            }
 
-            dbRecord.node_a_macs = new System.Net.NetworkInformation.PhysicalAddress(macBytes);
-            if(dbRecord.node_a_macs == null)
-            {
-                Debug.Log("Null");
-            }
-            raw = reader.GetString(reader.GetOrdinal("dst_mac"));
-            macBytes = new byte[6];
-            for (int i = 0; i < 6; i++)
-            {
-                macBytes[i] = (byte)raw[i];
-            }
+            string macHex = reader.GetString(reader.GetOrdinal("mac_a"));
+            dbRecord.node_a_macs = System.Net.NetworkInformation.PhysicalAddress.Parse(macHex);
+            macHex = reader.GetString(reader.GetOrdinal("mac_b"));
+            dbRecord.node_b_macs = System.Net.NetworkInformation.PhysicalAddress.Parse(macHex);
 
-            dbRecord.node_b_macs = new System.Net.NetworkInformation.PhysicalAddress(macBytes);
-            if (dbRecord.node_a_macs == null)
-            {
-                Debug.Log("Null");
-            }
-            //dbRecord.node_a_src_ports = (ushort[])reader.GetValue(reader.GetOrdinal("src_port"));
-            //dbRecord.node_a_dst_ports = (ushort[])reader.GetValue(reader.GetOrdinal("dst_port"));
-            //String[] l7s = (String[])reader.GetValue(reader.GetOrdinal("l7_proto"));
-            //dbRecord.node_a_l7_protos = StringArrayToAppLayerList(l7s);
+            dbRecord.node_a_src_ports = (ushort[])reader.GetValue(reader.GetOrdinal("ports_a"));
+            dbRecord.node_a_dst_ports = (ushort[])reader.GetValue(reader.GetOrdinal("ports_b"));
+
+            // combine all app layer protocols into one list for now
+            var l7s = (ushort[])reader.GetValue(reader.GetOrdinal("l7_protos_a"));
+            dbRecord.node_a_l7_protos = intArrayToAppLayerList(l7s);
+            l7s = (ushort[]) reader.GetValue(reader.GetOrdinal("l7_protos_b"));
+            dbRecord.node_a_l7_protos.Union(intArrayToAppLayerList(l7s));
 
             conns.Add(dbRecord);
         }
 
         return conns;
+    }
+
+    public List<SubConnection> subdivideConnectionByProtocol(Connection conn)
+    {
+        List<SubConnection> subConns = new List<SubConnection>();
+        try
+        {
+            foreach (var proto in conn.node_a_l7_protos)
+            {
+                SubConnection subConn = new SubConnection();
+                subConn.node_a = conn.node_a;
+                subConn.node_b = conn.node_b;
+                subConn.node_a_macs = conn.node_a_macs;
+                subConn.node_b_macs = conn.node_b_macs;
+                subConn.protocol = proto;
+                // set other fields to zero/empty
+                subConn.pkts = 0;
+                subConn.bytes = 0;
+                subConn.first_seen = new DateTime(1970, 01, 01);
+
+                subConns.Add(subConn);
+            }
+            return subConns;
+        }
+        catch (Exception e)
+        {
+            Debug.LogException(e);
+            return null;
+        }
+
+
+        
     }
 }

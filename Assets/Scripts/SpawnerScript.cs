@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Net.NetworkInformation;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -37,8 +39,34 @@ public class NodeSpawnerScript : MonoBehaviour
     Dictionary<string, string> NodeIDAddressRel = new Dictionary<string, string>();  ////// this can def be removed
 
     List<DBConnection.Node> nodeList = new List<DBConnection.Node>();
-    List<DBConnection.Connection> ConnectionList = new List<DBConnection.Connection>();
-    private List<GameObject> spawnedNodes = new List<GameObject>();
+    List<DBConnection.Connection> ConnectionList = new List<DBConnection.Connection>(); // get rid of this
+    List<DBConnection.SubConnection> SubConnectionList = new List<DBConnection.SubConnection>();// replace with subconnections
+    List<GameObject> IpNodeList = new List<GameObject>();
+    List<GameObject> spawnedNodes = new List<GameObject>();
+    public List<GameObject> spawnedConnections = new List<GameObject>();
+
+    public static void PrintListContents<T>(List<T> listToPrint)
+    {
+        if (listToPrint == null)
+        {
+            Debug.Log("The list is null.");
+            return;
+        }
+
+        Debug.Log($"--- Printing contents of List<{typeof(T).Name}> ---");
+
+        if (listToPrint.Count == 0)
+        {
+            Debug.Log("The list is empty.");
+            return;
+        }
+
+        foreach (T item in listToPrint)
+        {
+            Debug.Log(item);
+        }
+        Debug.Log("-------------------------------------------");
+    }
 
     void Awake()
     {
@@ -62,7 +90,18 @@ public class NodeSpawnerScript : MonoBehaviour
         {
             nodeList = dbConnection.getNodesAfter(new DateTime(2025, 09, 06, 16, 05, 01));
             ConnectionList = dbConnection.getConnectionsAfter(new DateTime(2025, 09, 06, 16, 05, 01));
+            // divide into sub-connections
+            foreach (var conn in ConnectionList)
+            {
+                List<DBConnection.SubConnection> connDivided = null;
+                connDivided = dbConnection.subdivideConnectionByProtocol(conn);
+                if (connDivided != null)
+                {
+                    SubConnectionList.AddRange(connDivided);
+                }
+            }
             Debug.Log($"{ConnectionList.Count} connections");
+            Debug.Log($"{SubConnectionList.Count} sub-connections");
         }
         MakeNodes();
         MakeConnections();
@@ -138,30 +177,32 @@ public class NodeSpawnerScript : MonoBehaviour
 
     void MakeConnections()
     {
-        foreach (DBConnection.Connection connection in ConnectionList)
+        foreach (DBConnection.SubConnection connection in SubConnectionList)
         {         
-            GameObject firstNode = null;
-            GameObject secondNode = null;
+            //GameObject firstNode = null;
+            //GameObject secondNode = null;
 
-            int Index = 0;
-            while ((firstNode == null || secondNode == null) && Index < spawnedNodes.Count)
-            {
-                NodeInfo info = spawnedNodes[Index].GetComponent<NodeInfo>();
-                Debug.Log(info.data.mac.ToString());
-                if (connection.node_a_macs.Equals(info.data.mac))
-                {
-                    firstNode = spawnedNodes[Index];
-                }
-                if (connection.node_b_macs.Equals(info.data.mac))
-                {
-                    secondNode = spawnedNodes[Index];
-                }
-                Index++;
-            }
+            //int Index = 0;
+            //while ((firstNode == null || secondNode == null) && Index < spawnedNodes.Count)
+            //{
+            //    NodeInfo info = spawnedNodes[Index].GetComponent<NodeInfo>();
+            //    Debug.Log(info.data.mac.ToString());
+            //    if (connection.node_a_macs.Equals(info.data.mac))
+            //    {
+            //        firstNode = spawnedNodes[Index];
+            //    }
+            //    if (connection.node_b_macs.Equals(info.data.mac))
+            //    {
+            //        secondNode = spawnedNodes[Index];
+            //    }
+            //    Index++;
+            //}
+            GameObject firstNode = FindNodeByMac(connection.node_a_macs);
+            GameObject secondNode = FindNodeByMac(connection.node_b_macs);
 
             if (firstNode == null || secondNode == null)
             {
-                Debug.LogWarning($"Skipping connection between {connection.node_a} and {connection.node_b} because one or both nodes are missing.");
+                Debug.LogWarning($"Skipping connection between {connection.node_a_macs} and {connection.node_b_macs} because one or both nodes are missing.");
                 continue;  // Skip this connection and move on to the next
             }
 
@@ -170,9 +211,65 @@ public class NodeSpawnerScript : MonoBehaviour
             connInfo.data.node1 = firstNode;
             connInfo.data.node2 = secondNode;
             connInfo.Initialize(connection);
+            spawnedConnections.Add(connectionObject);
 
             ConnectNodes(connectionObject.transform, firstNode.transform, secondNode.transform);
+            // check if there are multiple ip's to a node
+            //if (CountIP(firstNode) > 1)
+            //{
+            //    SplitNode(firstNode);
+            //    foreach (var node in IpNodeList)
+            //    {
+            //        ConnectNodes(connectionObject.transform, firstNode.transform, node.transform);
+            //    }
+            //}
+            //if (CountIP(secondNode) > 1)
+            //{
+            //    foreach (var node in IpNodeList)
+            //    {
+            //        ConnectNodes(connectionObject.transform, node.transform, secondNode.transform);
+            //    }
+            //}
         }
+    }
+    GameObject FindNodeByMac(PhysicalAddress mac)
+    {
+        foreach (var node in spawnedNodes)
+        {
+            var info = node.GetComponent<NodeInfo>();
+            if (mac.Equals(info.data.mac))
+                return node;
+        }
+        return null;
+    }
+
+    public void SplitNode(GameObject node)
+    {
+        var info = node.GetComponent<NodeInfo>();
+            foreach(var ip in info.data.ips)
+            {
+            GameObject nodeObject = Instantiate(NodePrefab);
+            var newNodeInfo = nodeObject.GetComponent<NodeInfo>();
+            DBConnection.Node newNode = new DBConnection.Node();
+                newNode.pkts = info.data.pkts;
+                newNode.bytes = info.data.bytes;
+                newNode.last_seen = info.data.last_seen;
+                newNode.first_seen = info.data.first_seen;
+                newNode.degree = info.data.degree;
+                newNode.ips.Add(ip);
+                newNode.src_ports = info.data.src_ports;
+                newNode.l7_protos = info.data.l7_protos;
+                newNode.device_type = info.data.device_type;
+                info.Initialize(newNode);
+                IpNodeList.Add(nodeObject);
+
+            }
+    }
+    public int CountIP(GameObject node)
+    {
+        var info = node.GetComponent<NodeInfo>();
+        int count = info.data.ips.Count;
+        return count;
     }
 
 
