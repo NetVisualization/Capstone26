@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Net.NetworkInformation;
 using UnityEngine;
 using UnityEngine.UI;
@@ -40,7 +41,8 @@ public class NodeSpawnerScript : MonoBehaviour
 
     List<DBConnection.Node> nodeList = new List<DBConnection.Node>();
     List<DBConnection.Connection> ConnectionList = new List<DBConnection.Connection>(); // get rid of this
-    List<DBConnection.SubConnection> SubConnectionList = new List<DBConnection.SubConnection>();// replace with subconnections
+    List<DBConnection.SubConnection> SubConnectionList = new List<DBConnection.SubConnection>();
+    List<DBConnection.SubConnection> SubConnectionIPList = new List<DBConnection.SubConnection>();
     List<GameObject> IpNodeList = new List<GameObject>();
     List<GameObject> spawnedNodes = new List<GameObject>();
     public List<GameObject> spawnedConnections = new List<GameObject>();
@@ -177,26 +179,8 @@ public class NodeSpawnerScript : MonoBehaviour
 
     void MakeConnections()
     {
-        foreach (DBConnection.SubConnection connection in SubConnectionList)
-        {         
-            //GameObject firstNode = null;
-            //GameObject secondNode = null;
-
-            //int Index = 0;
-            //while ((firstNode == null || secondNode == null) && Index < spawnedNodes.Count)
-            //{
-            //    NodeInfo info = spawnedNodes[Index].GetComponent<NodeInfo>();
-            //    Debug.Log(info.data.mac.ToString());
-            //    if (connection.node_a_macs.Equals(info.data.mac))
-            //    {
-            //        firstNode = spawnedNodes[Index];
-            //    }
-            //    if (connection.node_b_macs.Equals(info.data.mac))
-            //    {
-            //        secondNode = spawnedNodes[Index];
-            //    }
-            //    Index++;
-            //}
+        foreach (DBConnection.SubConnection connection in SubConnectionList.ToList())
+        {        
             GameObject firstNode = FindNodeByMac(connection.node_a_macs);
             GameObject secondNode = FindNodeByMac(connection.node_b_macs);
 
@@ -214,22 +198,23 @@ public class NodeSpawnerScript : MonoBehaviour
             spawnedConnections.Add(connectionObject);
 
             ConnectNodes(connectionObject.transform, firstNode.transform, secondNode.transform);
-            // check if there are multiple ip's to a node
-            //if (CountIP(firstNode) > 1)
-            //{
-            //    SplitNode(firstNode);
-            //    foreach (var node in IpNodeList)
-            //    {
-            //        ConnectNodes(connectionObject.transform, firstNode.transform, node.transform);
-            //    }
-            //}
-            //if (CountIP(secondNode) > 1)
-            //{
-            //    foreach (var node in IpNodeList)
-            //    {
-            //        ConnectNodes(connectionObject.transform, node.transform, secondNode.transform);
-            //    }
-            //}
+            //check if there are multiple ip's to a node
+            if (CountIP(firstNode) > 1)
+            {
+                SplitNode(firstNode);
+                foreach (var node in IpNodeList)
+                {
+                    splitConnection(connection, firstNode, node);
+                }
+            }
+            if (CountIP(secondNode) > 1)
+            {
+                SplitNode(secondNode);
+                foreach (var node in IpNodeList)
+                {
+                    splitConnection(connection, secondNode, node);
+                }
+            }
         }
     }
     GameObject FindNodeByMac(PhysicalAddress mac)
@@ -243,28 +228,143 @@ public class NodeSpawnerScript : MonoBehaviour
         return null;
     }
 
+    //public void SplitNode(GameObject node)
+    //{
+    //    var info = node.GetComponent<NodeInfo>();
+    //        foreach(var ip in info.data.ips)
+    //        {
+    //        GameObject nodeObject = Instantiate(NodePrefab);
+    //        var newNodeInfo = nodeObject.GetComponent<NodeInfo>();
+    //        DBConnection.Node newNode = new DBConnection.Node();
+    //            newNode.pkts = info.data.pkts;
+    //            newNode.bytes = info.data.bytes;
+    //            newNode.last_seen = info.data.last_seen;
+    //            newNode.first_seen = info.data.first_seen;
+    //            newNode.degree = info.data.degree;
+    //            newNode.ips.Add(ip);
+    //            newNode.src_ports = info.data.src_ports;
+    //            newNode.l7_protos = info.data.l7_protos;
+    //            newNode.device_type = info.data.device_type;
+    //            info.Initialize(newNode);
+    //            IpNodeList.Add(nodeObject);
+    //        placeNodev1(nodeObject);
+
+    //        }
+    //}
     public void SplitNode(GameObject node)
     {
         var info = node.GetComponent<NodeInfo>();
-            foreach(var ip in info.data.ips)
+
+        foreach (var ip in info.data.ips)
+        {
+            if (NodeExists(info.data.mac, ip))
             {
+                Debug.Log($"Node for {info.data.mac} - {ip} already exists. Skipping.");
+                continue;
+            }
+            Debug.Log(ip.ToString());
             GameObject nodeObject = Instantiate(NodePrefab);
             var newNodeInfo = nodeObject.GetComponent<NodeInfo>();
-            DBConnection.Node newNode = new DBConnection.Node();
-                newNode.pkts = info.data.pkts;
-                newNode.bytes = info.data.bytes;
-                newNode.last_seen = info.data.last_seen;
-                newNode.first_seen = info.data.first_seen;
-                newNode.degree = info.data.degree;
-                newNode.ips.Add(ip);
-                newNode.src_ports = info.data.src_ports;
-                newNode.l7_protos = info.data.l7_protos;
-                newNode.device_type = info.data.device_type;
-                info.Initialize(newNode);
-                IpNodeList.Add(nodeObject);
 
-            }
+            DBConnection.Node newNode = new DBConnection.Node
+            {
+                pkts = info.data.pkts,
+                bytes = info.data.bytes,
+                last_seen = info.data.last_seen,
+                first_seen = info.data.first_seen,
+                degree = info.data.degree,
+                src_ports = info.data.src_ports,
+                l7_protos = info.data.l7_protos,
+                device_type = info.data.device_type,
+                mac = info.data.mac, //  keep same MAC
+                ips = new List<IPAddress>()
+            };
+            newNode.ips.Add(ip);
+
+            newNodeInfo.Initialize(newNode);  //  Initialize the NEW node, not the old one
+            IpNodeList.Add(nodeObject);
+            spawnedNodes.Add(nodeObject);     //  Track for future lookup
+            nodeObject.transform.position = placeNodev1(nodeObject);
+        }
     }
+
+    public void splitConnection(DBConnection.SubConnection connection, GameObject Original, GameObject NewNode)
+    {
+        NodeInfo originalInfo = Original.GetComponent<NodeInfo>();
+        NodeInfo newInfo = NewNode.GetComponent<NodeInfo>();
+
+        if (originalInfo == null || newInfo == null)
+        {
+            Debug.LogError("splitConnection: One or both provided GameObjects are missing NodeInfo!");
+            return;
+        }
+
+        DBConnection.SubConnection newConnection = new DBConnection.SubConnection();
+
+        // --- Copy over connection attributes ---
+        newConnection.protocol = connection.protocol;
+        newConnection.pkts = connection.pkts / 2;
+        newConnection.bytes = connection.bytes / 2;
+        newConnection.first_seen = connection.first_seen;
+
+        // --- Assign MACs ---
+        newConnection.node_a_macs = originalInfo.data.mac;
+        newConnection.node_b_macs = newInfo.data.mac;
+
+        // --- Assign IP lists ---
+        newConnection.node_a = new List<IPAddress>(originalInfo.data.ips);
+        newConnection.node_b = new List<IPAddress>(newInfo.data.ips);
+
+        // --- Assign GameObject references ---
+        newConnection.node1 = Original;
+        newConnection.node2 = NewNode;
+
+        // --- Add to tracking lists ---
+        SubConnectionList.Add(newConnection);
+
+        // --- Spawn visual connection object ---
+        GameObject connectionObj = Instantiate(connectionPrefab);
+        spawnedConnections.Add(connectionObj);
+
+        // --- Initialize connection data ---
+        ConnectionInfo connInfo = connectionObj.GetComponent<ConnectionInfo>();
+        connInfo.Initialize(newConnection);
+        connInfo.data.node1 = Original;
+        connInfo.data.node2 = NewNode;
+
+        // --- Visually connect them ---
+        ConnectNodes(connectionObj.transform, Original.transform, NewNode.transform);
+
+        // --- Change appearance so split connections stand out ---
+        var renderer = connectionObj.GetComponent<MeshRenderer>();
+        if (renderer != null)
+        {
+            // Example 1: choose color based on protocol
+                    // If it’s a “split” connection, tint the color slightly blue for distinction
+            renderer.material = ConnectionLight;
+            renderer.material.color = Color.cyan; // distinct from the main connections
+
+        }
+
+        Debug.Log($"Created split sub-connection between {originalInfo.data.mac} and {newInfo.data.mac} with protocol {newConnection.protocol}");
+    }
+
+
+
+
+    bool NodeExists(PhysicalAddress mac, IPAddress ip)
+    {
+        foreach (var node in IpNodeList)
+        {
+            var info = node.GetComponent<NodeInfo>();
+            if (mac.Equals(info.data.mac) && info.data.ips.Contains(ip))
+            {
+                return true; // Already spawned
+            }
+        }
+        return false;
+    }
+
     public int CountIP(GameObject node)
     {
         var info = node.GetComponent<NodeInfo>();
@@ -272,102 +372,25 @@ public class NodeSpawnerScript : MonoBehaviour
         return count;
     }
 
-
-    void UpdateConnections()
-    {
-        //    // Calculate split points for connection coloring
-        //    int numPMed;
-        //    int numPHeavy;
-
-        //    List<int> numPackets = new();
-
-        //    if (ConnectionObjects.Keys.Count > 0)
-        //    {
-        //        foreach (GameObject connectionObject in ConnectionObjects.Values)
-        //        {
-        //            numPackets.Add(connectionObject.GetComponent<ConnectionData>().NumPackets);
-        //        }
-        //    }
-        //    else
-        //    {
-        //        return;
-        //    }
-
-        //    numPackets.Sort();
-        //    numPMed = numPackets[numPackets.Count / 3];
-        //    numPHeavy = numPackets[2 * (numPackets.Count / 3)];
-
-        //    foreach (GameObject connectionObject in ConnectionObjects.Values)
-        //    {
-        //        GameObject firstNode = connectionObject.GetComponent<ConnectionData>().NodeA;
-        //        GameObject secondNode = connectionObject.GetComponent<ConnectionData>().NodeB;
-
-        //        // Check if either node is hidden
-        //        connectionObject.SetActive(!(firstNode.GetComponent<NodeData>().isHidden ||
-        //                                    secondNode.GetComponent<NodeData>().isHidden));
-
-        //        // Ensure both nodes are active
-        //        connectionObject.SetActive((firstNode.activeSelf && secondNode.activeSelf));
-
-        //        // Set position to parent nodes
-        //        connectionObject.transform.position = (firstNode.transform.position + secondNode.transform.position) / 2;
-        //        connectionObject.transform.rotation = Quaternion.FromToRotation(Vector3.up, secondNode.transform.position - firstNode.transform.position);
-        //        Vector3 delta = secondNode.transform.position - firstNode.transform.position;
-        //        float connectionLength = delta.magnitude / 2;
-
-        //        // The size of the visible object
-        //        //connectionObject.transform.localScale = new Vector3(0.08f, connectionLength, 0.08f);
-        //        connectionObject.transform.localScale.Set(connectionObject.transform.localScale.x, connectionLength, connectionObject.transform.localScale.z);
-
-        //        // The size of the hitbox
-        //        connectionObject.GetComponent<CapsuleCollider>().transform.localScale = new Vector3(0.08f, connectionLength, 0.08f);
-        //        //connectionObject.GetComponent<CapsuleCollider>().transform.localScale.Set(connectionObject.transform.localScale.x, connectionLength, connectionObject.transform.localScale.z);
-
-        //        // Update color of connection
-        //        if (connectionObject.GetComponent<ConnectionData>().NumPackets >= numPHeavy)
-        //        {
-        //            connectionObject.GetComponent<MeshRenderer>().material = ConnectionHeavy;
-        //        }
-        //        else if (connectionObject.GetComponent<ConnectionData>().NumPackets >= numPMed)
-        //        {
-        //            connectionObject.GetComponent<MeshRenderer>().material = ConnectionMed;
-        //        }
-        //        else
-        //        {
-        //            connectionObject.GetComponent<MeshRenderer>().material = ConnectionLight;
-        //        }
-        //    }
-    }
-
-    // Generate a random node position vector
-    //Vector3 randomPosVector()
-    //{
-    //    System.Random rnd = new System.Random();
-
-    //    float x = (float)((rnd.NextDouble() * 10) - 5); // -1 to 1
-    //    float y = (float)((rnd.NextDouble() * 5) + 0.1); // .1 - 2.1
-    //    float z = (float)((rnd.NextDouble() * 10) - 5); // -1 to 1
-
-    //    return new Vector3(x, y, z);
-    //}
-
     Vector3 placeNodev1(GameObject node)
     {
         Vector3 v = new Vector3();
 
-        //char vChar = Char.ToUpper(node.GetComponent<NodeData>().Vendor[0]);
-
-        // assign x based on vendor
-        v.x = UnityEngine.Random.Range(0, 5f);
-
-        // assign heights based on number of connections
-        v.y = UnityEngine.Random.Range(0, 5f);
-
-        // just have them all start in a line
-        v.z = UnityEngine.Random.Range(0, 2f);
+        // Wider horizontal spread
+        v.x = UnityEngine.Random.Range(-10f, 10f);
+        v.y = UnityEngine.Random.Range(5f, 10f);   // vertical height
+        v.z = UnityEngine.Random.Range(-10f, 10f); // deeper spread
 
         return v;
     }
+    //Vector3 placeNodev1(GameObject node)
+    //{
+    //    float radius = 25f;  // increase for wider spread
+    //    Vector3 randomDir = UnityEngine.Random.onUnitSphere;  // random direction
+    //    float randomRadius = radius * UnityEngine.Random.Range(0.5f, 1f);
+
+    //    return randomDir * randomRadius;
+    //}
     public void ConnectNodes(Transform connection, Transform a, Transform b)
     {
         if (a == null || b == null)

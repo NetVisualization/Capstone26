@@ -29,4 +29,18 @@ public class InfoPannelController : MonoBehaviour
             $"<b>Device Type:</b> {node.device_type}\n";
     }
 
+    public void setText(ConnectionInfo data)
+    {
+        if (data == null)
+        {
+            Debug.LogWarning("data is null");
+            return;
+        }
+        var node = data.data;
+        infoText.text =
+            $"<b>Mac Address 1:</b> {node.node_a_macs}\n" +
+            $"<b>Mac Address 2:</b> {node.node_b_macs}\n" +
+            $"<b># packets:</b> {node.pkts}\n" +
+            $"<b># Bytes:</b> {node.bytes}\n";
+    }
 }

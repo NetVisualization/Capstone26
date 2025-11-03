@@ -5,9 +5,9 @@ using UnityEngine;
 using UnityEngine.UIElements;
 using UnityEngine.XR.Interaction.Toolkit;
 
-public class showNodeInfo : MonoBehaviour
+public class ConnectionInfoController : MonoBehaviour
 {
-    [SerializeField] private NodeInfo data;
+    [SerializeField] private ConnectionInfo data;
     [SerializeField] public InfoPannelController pannel;
     private XRBaseInteractable interactable;
     // Start is called before the first frame update
@@ -26,8 +26,8 @@ public class showNodeInfo : MonoBehaviour
     }
     private void OnEnable()
     {
-        
-            interactable.selectEntered.AddListener(OnSelect);
+
+        interactable.selectEntered.AddListener(OnSelect);
     }
     private void OnDisable()
     {
