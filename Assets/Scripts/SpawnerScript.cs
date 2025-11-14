@@ -1075,6 +1075,16 @@ public class NodeSpawnerScript : MonoBehaviour
     // The MAC with the most IPs (router) pinned at center
     GameObject routerMacGO = null;
 
+    // One string per connection, e.g. "MACA|MACB|PROTO"
+    private HashSet<string> spawnedConnectionKeys = new();
+
+    // For polling
+    public float refreshInterval = 2f;  // seconds between DB polls
+    private float refreshTimer = 0f;
+
+    private DateTime lastFetchTime;
+
+
     // ---------------------------------------------------------------------
     // Unity lifecycle
     // ---------------------------------------------------------------------
@@ -1126,7 +1136,26 @@ public class NodeSpawnerScript : MonoBehaviour
 
         // 4) MAC<->IP mapping (curved, different color)
         MakeMacIpMappingEdgesCurved();
+
+        lastFetchTime = DateTime.UtcNow.AddSeconds(-5);
     }
+    // ---------------------------------------------------------------------
+    //  Update only for live traffic
+    // ---------------------------------------------------------------------
+
+    void Update()
+    {
+        if (liveToggle == null || !liveToggle.isOn)
+            return;
+
+        refreshTimer += Time.deltaTime;
+        if (refreshTimer >= refreshInterval)
+        {
+            refreshTimer = 0f;
+            PollForNewTraffic();
+        }
+    }
+
 
     // ---------------------------------------------------------------------
     //  MAC layer
@@ -1566,5 +1595,132 @@ public class NodeSpawnerScript : MonoBehaviour
         col.isTrigger = true;
         col.radius = radius;
     }
+
+    // ---------------------------------------------------------------------
+    //  live traffic functions
+    // ---------------------------------------------------------------------
+    void PollForNewTraffic()
+    {
+        if (dbConnection == null) return;
+
+        // 1) ask DB for anything newer than lastFetchTime
+        var newNodes = dbConnection.getNodesAfter(lastFetchTime);
+        var newConns = dbConnection.getConnectionsAfter(lastFetchTime);
+
+        // 2) bump lastFetchTime to the newest first_seen we saw
+        DateTime maxTs = lastFetchTime;
+        foreach (var n in newNodes)
+            if (n.first_seen > maxTs) maxTs = n.first_seen;
+        foreach (var c in newConns)
+            if (c.first_seen > maxTs) maxTs = c.first_seen;
+        if (maxTs > lastFetchTime)
+            lastFetchTime = maxTs;
+
+        // 3) spawn any *new* MAC nodes
+        foreach (var n in newNodes)
+        {
+            nodeList.Add(n);              // keep global list in sync
+            SpawnMacNodeIfNeeded(n);
+        }
+
+        // 4) subdivide new connections into sub-connections
+        var newSubs = new List<DBConnection.SubConnection>();
+        foreach (var conn in newConns)
+        {
+            var parts = dbConnection.subdivideConnectionByProtocol(conn);
+            if (parts != null) newSubs.AddRange(parts);
+        }
+        SubConnectionList.AddRange(newSubs);
+
+        // 5) draw edges only for the new sub-connections
+        MakeMacTrafficConnectionsFor(newSubs);
+
+        // 6) OPTIONAL: update IP layer & MAC<->IP mapping for new nodes
+        //    (simple version: just hook their IPs into the existing IP hubs)
+        foreach (var n in newNodes)
+        {
+            GameObject macGO = FindNodeByMac(n.mac);
+            if (macGO == null || n.ips == null) continue;
+
+            foreach (var ip in n.ips)
+            {
+                var ipGO = CreateOrGetIpNode(ip);
+
+                if (curvedEdgePrefab != null && curvedEdgePrefab.GetComponent<LineRenderer>() != null)
+                {
+                    var edge = Instantiate(curvedEdgePrefab);
+                    spawnedConnections.Add(edge);
+                    var lr = edge.GetComponent<LineRenderer>();
+                    ApplyEdgeMaterial(lr, ConnectionMed);
+                    SetQuadraticCurve(lr, macGO.transform.position, ipGO.transform.position, 0.35f, 20);
+                }
+                else
+                {
+                    var edge = Instantiate(connectionPrefab);
+                    spawnedConnections.Add(edge);
+                    ConnectStraight(edge.transform, macGO.transform, ipGO.transform, ConnectionMed);
+                }
+            }
+        }
+    }
+
+    void SpawnMacNodeIfNeeded(DBConnection.Node node)
+    {
+        string macKey = node.mac?.ToString();
+        if (!string.IsNullOrEmpty(macKey) && NodeObjects.ContainsKey(macKey))
+            return; // already visualized
+
+        GameObject go = Instantiate(NodePrefab);
+        var info = go.GetComponent<NodeInfo>();
+        info.Initialize(node);
+
+        // quick placement: near its subnet hub, on the MAC plane
+        IPAddress primary = (node.ips != null && node.ips.Count > 0) ? node.ips[0] : null;
+        string subnet = (primary != null) ? SubnetKey(primary) : "unknown";
+        var hub = CreateOrGetMacSubnetHub(subnet);
+
+        float localR = Mathf.Lerp(MacLocalRadiusMin, MacLocalRadiusMax, 0.5f);
+        float ang = UnityEngine.Random.Range(0f, Mathf.PI * 2f);
+        Vector3 local = new Vector3(Mathf.Cos(ang) * localR, 0f, Mathf.Sin(ang) * localR);
+        Vector3 pos = hub.transform.position + local;
+        pos.y = MacPlaneY;
+        go.transform.position = pos;
+
+        spawnedMacNodes.Add(go);
+        if (!string.IsNullOrEmpty(macKey))
+            NodeObjects[macKey] = go;
+    }
+
+
+    void MakeMacTrafficConnectionsFor(IEnumerable<DBConnection.SubConnection> subs)
+    {
+        foreach (var sc in subs)
+        {
+            // Skip if we've already drawn this MAC-pair+protocol
+            string key = ConnectionKey(sc);
+            if (!spawnedConnectionKeys.Add(key))
+                continue;
+
+            GameObject a = FindNodeByMac(sc.node_a_macs);
+            GameObject b = FindNodeByMac(sc.node_b_macs);
+            if (a == null || b == null) continue;
+
+            GameObject edge = Instantiate(connectionPrefab);
+            spawnedConnections.Add(edge);
+
+            // simple straight connection; your overload has default protoIndex/protoCount
+            ConnectStraight(edge.transform, a.transform, b.transform, ConnectionLight);
+        }
+    }
+
+
+    string ConnectionKey(DBConnection.SubConnection sc)
+    {
+        string pair = EdgeKey(sc.node_a_macs, sc.node_b_macs);
+        // include protocol so each MAC pair+proto is unique
+        return $"{pair}|{(int)sc.protocol}";
+    }
+
+
 }
 

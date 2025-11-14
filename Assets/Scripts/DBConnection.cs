@@ -103,6 +103,8 @@ public class DBConnection : MonoBehaviour
     NodeSpawnerScript nodeSpawnerScript;
     public GameObject nodeSpawner;
 
+    DateTime date = new DateTime(2025, 09, 06, 16, 06, 01);
+
     //public Node[] nodes;
     //public Connection[] connections;
 
@@ -122,7 +124,7 @@ public class DBConnection : MonoBehaviour
             //int result = await getNodeCountAsync();
             //Debug.Log($"There are {result} nodes");
 
-            List<Node> nodes = getNodesAfter(new DateTime(2025, 09, 06, 16, 06, 01));
+            List<Node> nodes = getNodesAfter(date);
 
             foreach (var field in typeof(Node).GetFields(BindingFlags.Public | BindingFlags.Instance))
             {
