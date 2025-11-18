@@ -440,7 +440,7 @@
 ////        if (renderer != null)
 ////        {
 ////            // Example 1: choose color based on protocol
-////                    // If it’s a “split” connection, tint the color slightly blue for distinction
+////                    // If itï¿½s a ï¿½splitï¿½ connection, tint the color slightly blue for distinction
 ////            renderer.material = ConnectionLight;
 ////            renderer.material.color = Color.cyan; // distinct from the main connections
 
@@ -560,7 +560,7 @@
 //    public float MacMaxStep = 0.25f;
 
 //    [Header("IP Plane (group by subnet)")]
-//    public float IpSubnetRingRadius = 22f; // big ring for IP subnet hubs (y=IpPlaneY) — same as MAC to align vertically
+//    public float IpSubnetRingRadius = 22f; // big ring for IP subnet hubs (y=IpPlaneY) ï¿½ same as MAC to align vertically
 //    public float IpLocalRadiusMin = 1.5f;
 //    public float IpLocalRadiusMax = 4.5f;
 //    public int IpRelaxIterations = 2;
@@ -848,7 +848,7 @@
 //    {
 //        var set = new HashSet<string>();
 
-//        // From each MAC node’s primary IP (if any)
+//        // From each MAC nodeï¿½s primary IP (if any)
 //        foreach (var node in nodeList)
 //        {
 //            if (node.ips != null && node.ips.Count > 0)
@@ -1003,6 +1003,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.NetworkInformation;
+using System.Timers;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -1052,6 +1053,11 @@ public class NodeSpawnerScript : MonoBehaviour
     public float IpRepel = 4f;
     public float IpMaxStep = 0.2f;
 
+    [Header("Render Timer")]
+    private float renderTimer = 0.0f;
+    private float waitTime = 5.0f;
+    private DateTime lastRender;
+
     // ---------------------------------------------------------------------
     // Internal state
     // ---------------------------------------------------------------------
@@ -1097,14 +1103,17 @@ public class NodeSpawnerScript : MonoBehaviour
         }
         else
         {
-            nodeList = dbConnection.getNodesAfter(new DateTime(2025, 09, 06, 16, 05, 01));
-            ConnectionList = dbConnection.getConnectionsAfter(new DateTime(2025, 09, 06, 16, 05, 01));
+            DateTime initTime = new DateTime(1970, 01, 01, 00, 00, 00);     // ensure the initial frame renders all nodes
+            nodeList = dbConnection.getNodesAfter(initTime);
+            ConnectionList = dbConnection.getConnectionsAfter(initTime);
 
             foreach (var conn in ConnectionList)
             {
                 var parts = dbConnection.subdivideConnectionByProtocol(conn);
                 if (parts != null) SubConnectionList.AddRange(parts);
             }
+            lastRender = DateTime.Now;
+
             Debug.Log($"{ConnectionList.Count} connections");
             Debug.Log($"{SubConnectionList.Count} sub-connections");
         }
