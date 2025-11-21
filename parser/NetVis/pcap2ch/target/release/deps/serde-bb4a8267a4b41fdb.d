@@ -1,0 +1,14 @@
+C:\Users\eoliv\development\capstone26\parser\NetVis\pcap2ch\target\release\deps\serde-bb4a8267a4b41fdb.d: C:\Users\eoliv\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.226\src\lib.rs C:\Users\eoliv\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.226\src\integer128.rs C:\Users\eoliv\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.226\src\private\mod.rs C:\Users\eoliv\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.226\src\private\de.rs C:\Users\eoliv\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.226\src\private\ser.rs C:\Users\eoliv\development\capstone26\parser\NetVis\pcap2ch\target\release\build\serde-ce6265e0a9749164\out/private.rs
+
+C:\Users\eoliv\development\capstone26\parser\NetVis\pcap2ch\target\release\deps\libserde-bb4a8267a4b41fdb.rlib: C:\Users\eoliv\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.226\src\lib.rs C:\Users\eoliv\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.226\src\integer128.rs C:\Users\eoliv\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.226\src\private\mod.rs C:\Users\eoliv\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.226\src\private\de.rs C:\Users\eoliv\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.226\src\private\ser.rs C:\Users\eoliv\development\capstone26\parser\NetVis\pcap2ch\target\release\build\serde-ce6265e0a9749164\out/private.rs
+
+C:\Users\eoliv\development\capstone26\parser\NetVis\pcap2ch\target\release\deps\libserde-bb4a8267a4b41fdb.rmeta: C:\Users\eoliv\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.226\src\lib.rs C:\Users\eoliv\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.226\src\integer128.rs C:\Users\eoliv\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.226\src\private\mod.rs C:\Users\eoliv\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.226\src\private\de.rs C:\Users\eoliv\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.226\src\private\ser.rs C:\Users\eoliv\development\capstone26\parser\NetVis\pcap2ch\target\release\build\serde-ce6265e0a9749164\out/private.rs
+
+C:\Users\eoliv\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.226\src\lib.rs:
+C:\Users\eoliv\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.226\src\integer128.rs:
+C:\Users\eoliv\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.226\src\private\mod.rs:
+C:\Users\eoliv\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.226\src\private\de.rs:
+C:\Users\eoliv\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.226\src\private\ser.rs:
+C:\Users\eoliv\development\capstone26\parser\NetVis\pcap2ch\target\release\build\serde-ce6265e0a9749164\out/private.rs:
+
+# env-dep:OUT_DIR=C:\\Users\\eoliv\\development\\capstone26\\parser\\NetVis\\pcap2ch\\target\\release\\build\\serde-ce6265e0a9749164\\out

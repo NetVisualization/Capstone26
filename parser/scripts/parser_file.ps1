@@ -1,7 +1,7 @@
 # Configuration
 $projectRoot = "C:\Users\eoliv\development\capstone26\parser\NetVis\pcap2ch"
 $exePath = "$projectRoot\target\release\pcap2ch.exe"
-$env:RUSTFLAGS="-L C:\Users\eoliv\development\deps\npcap-sdk-1.15\Lib\x64\"
+$env:RUSTFLAGS="-L $projectRoot\npcap-sdk-1.15\Lib\x64\"
 
 # Check if executable exists; compile if not
 if (-not (Test-Path -Path $exePath)) {
