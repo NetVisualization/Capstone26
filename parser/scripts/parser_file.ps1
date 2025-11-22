@@ -1,7 +1,7 @@
 # Configuration
-$projectRoot = Get-Location
+$repoRoot = Split-Path -Parent $PSScriptRoot
+$projectRoot = Join-Path -Path $repoRoot -ChildPath "NetVis\pcap2ch"
 $exePath = "$projectRoot\target\release\pcap2ch.exe"
-$env:RUSTFLAGS="-L $projectRoot\libs\npcap-sdk-1.15\Lib\x64\"
 
 # Check if executable exists; compile if not
 if (-not (Test-Path -Path $exePath)) {
