@@ -22,11 +22,11 @@ $env:RUST_LOG = "info"
 
 # Execute
 & $exePath `
- --ch-url "http://10.200.1.13:8123" `
+ --ch-url "http://localhost:8123" `
  --ch-db "net" `
  --ch-user "capstone" `
  --ch-password "boogle" `
  --ch-head-table "packets" `
  --ch-raw-table "raw_bytes" `
  live `
- --iface "en0"
+ --iface "Ethernet"
