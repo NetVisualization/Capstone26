@@ -289,12 +289,16 @@ public class NodeSpawnerScript : MonoBehaviour
                 GameObject edge = Instantiate(connectionPrefab);
                 spawnedConnections.Add(edge);
 
-                // Pass index + total to spread parallel edges left/right of the line
-                // (ConnectStraight already does the perpendicular offset on y=0)
-                ConnectStraight(edge.transform, a.transform, b.transform, ConnectionLight, i, count);
+                // keep your parallel offset behavior
+                ConnectStraight(edge.transform, a.transform, b.transform, null, i, count);
+
+                // color by protocol
+                var rend = edge.GetComponentInChildren<Renderer>();
+                SetRendererColor(rend, GetColorForProtocol(sc.protocol));
             }
         }
     }
+
 
     string EdgeKey(PhysicalAddress a, PhysicalAddress b)
     {
@@ -477,6 +481,47 @@ public class NodeSpawnerScript : MonoBehaviour
         if (b.Length == 4) return $"{b[0]}.{b[1]}.{b[2]}.0/24";
         return $"v6:{b[0]:X2}{b[1]:X2}:{b[2]:X2}{b[3]:X2}:{b[4]:X2}{b[5]:X2}:{b[6]:X2}{b[7]:X2}/64";
     }
+
+    // ---------- Protocol to Color mapping ----------
+    Color GetColorForProtocol(l7_proto proto)
+    {
+        // Distinct, readable palette. Tweak as you like.
+        switch (proto)
+        {
+            case l7_proto.SSH: return new Color(0.84f, 0.16f, 0.23f); // #D7293B
+            case l7_proto.SMTP: return new Color(0.98f, 0.62f, 0.01f); // #FA9E03
+            case l7_proto.DNS: return new Color(0.18f, 0.60f, 0.96f); // #2E99F5
+            case l7_proto.DHCP: return new Color(0.41f, 0.23f, 0.88f); // #693BE0
+            case l7_proto.HTTP: return new Color(0.95f, 0.38f, 0.09f); // #F26117
+            case l7_proto.POP3: return new Color(0.11f, 0.74f, 0.73f); // #1DBDBA
+            case l7_proto.NTP: return new Color(0.16f, 0.80f, 0.26f); // #29CC43
+            case l7_proto.IMAP: return new Color(0.60f, 0.47f, 0.16f); // #99782A
+            case l7_proto.TLS: return new Color(0.13f, 0.59f, 0.95f); // #218FEF (HTTPS-ish)
+            case l7_proto.SMB: return new Color(0.62f, 0.35f, 0.71f); // #9E59B5
+            case l7_proto.QUIC: return new Color(0.96f, 0.23f, 0.33f); // #F63B55
+            case l7_proto.SSDP: return new Color(0.50f, 0.83f, 0.13f); // #80D321
+            case l7_proto.RDP: return new Color(0.95f, 0.18f, 0.54f); // #F22E8A
+            case l7_proto.MDNS: return new Color(0.00f, 0.67f, 0.52f); // #00AA85
+            case l7_proto.UNKNOWN:
+            default: return Color.gray;
+        }
+    }
+
+    // ---------- Safely apply color to MeshRenderer / Standard / URP shaders ----------
+    static MaterialPropertyBlock _mpb;
+    void SetRendererColor(Renderer r, Color c)
+    {
+        if (r == null) return;
+        if (_mpb == null) _mpb = new MaterialPropertyBlock();
+        r.GetPropertyBlock(_mpb);
+
+        // Common color property names
+        _mpb.SetColor("_Color", c);      // Standard / Unlit
+        _mpb.SetColor("_BaseColor", c);  // URP Lit
+
+        r.SetPropertyBlock(_mpb);
+    }
+
 
     // ---------------------------------------------------------------------
     //  Geometry / drawing
@@ -719,10 +764,13 @@ public class NodeSpawnerScript : MonoBehaviour
             GameObject edge = Instantiate(connectionPrefab);
             spawnedConnections.Add(edge);
 
-            // simple straight connection; your overload has default protoIndex/protoCount
-            ConnectStraight(edge.transform, a.transform, b.transform, ConnectionLight);
+            ConnectStraight(edge.transform, a.transform, b.transform, null);
+
+            var rend = edge.GetComponentInChildren<Renderer>();
+            SetRendererColor(rend, GetColorForProtocol(sc.protocol));
         }
     }
+
 
     // makes evey mac unique
     string ConnectionKey(DBConnection.SubConnection sc)
