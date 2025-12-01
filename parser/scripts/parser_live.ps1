@@ -2,7 +2,6 @@
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $projectRoot = Join-Path -Path $repoRoot -ChildPath "NetVis\pcap2ch"
 $exePath = "$projectRoot\target\release\pcap2ch.exe"
-Write-Host $projectRoot
 $env:LIB = "$projectRoot\lib\npcap-sdk-1.15\Lib\x64"
 
 # Check if executable exists; compile if not
