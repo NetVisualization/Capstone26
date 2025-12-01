@@ -30,6 +30,6 @@ $env:RUST_LOG = "info"
   --ch-head-table "packets" `
   --ch-raw-table "raw_bytes" `
   file `
-  --path "C:\Users\eoliv\development\test.pcapng" `
+  --path "C:\Users\WPT\Desktop\netvisunity\parser\NetVis\scans\demo.pcapng" `
   --insert `
   --batch-size 5000
