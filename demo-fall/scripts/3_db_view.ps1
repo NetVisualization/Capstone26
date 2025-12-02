@@ -4,20 +4,13 @@
     Usage: .\query_db.ps1 "SELECT * FROM system.databases"
 #>
 
-[CmdletBinding()]
-param(
-    [Parameter(Mandatory=$true, Position=0)]
-    [string]$Query,
-
-    [string]$HostName = "localhost",
-    [string]$Port = "8123",
-    [string]$User = "capstone",
-    [string]$Password = "boogle"
-)
-
 $ErrorActionPreference = "Stop"
 
 # ===== Connection Setup =====
+$HostName = "10.200.1.13"
+$Port = "8123"
+$User = "capstone"
+$Password = "boogle"
 $BaseUrl = "http://${HostName}:${Port}"
 $AuthBytes = [System.Text.Encoding]::ASCII.GetBytes("${User}:${Password}")
 $Base64Auth = [System.Convert]::ToBase64String($AuthBytes)
@@ -35,7 +28,7 @@ function Invoke-ClickHouseQuery {
     $FinalSql = "$CleanSql FORMAT JSON"
 
     try {
-        $Response = Invoke-RestMethod -Uri "$BaseUrl/?wait_end_of_query=1" `
+        $Response = Invoke-RestMethod -Uri "$BaseUrl/?wait_end_of_query=1&database=net" `
             -Method Post `
             -Body $FinalSql `
             -Headers $Headers `
@@ -62,8 +55,8 @@ function Invoke-ClickHouseQuery {
 
 # ===== Execution =====
 Write-Host "Viewing nodes table:" -ForegroundColor Green
-Invoke-ClickHouseQuery "SELECT * from display_nodes"
+Invoke-ClickHouseQuery "SELECT * from display_nodes LIMIT 3"
 
 Read-Host -Prompt "Press Enter to continue..."
 Write-Host "Viewing connections table:" -ForegroundColor Green
-Invoke-ClickHouseQuery "SELECT * from display_connections"
+Invoke-ClickHouseQuery "SELECT * from display_connections LIMIT 3"
