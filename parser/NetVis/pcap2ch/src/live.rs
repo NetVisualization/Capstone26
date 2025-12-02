@@ -30,6 +30,20 @@ pub struct LiveOpts {
     pub ch_password: String,
 }
 
+pub fn list_interfaces() -> Result<()> {
+    let devices = Device::list()?;
+    println!("Available capture interfaces:");
+    for (i, d) in devices.iter().enumerate() {
+        println!(
+            "  [{}] name={} desc={}",
+            i + 1,
+            d.name,
+            d.desc.as_deref().unwrap_or("")
+        );
+    }
+    Ok(())
+}
+
 pub async fn run(opts: LiveOpts) -> Result<()> {
     // Build ClickHouse client (with credentials, like your File path)
     let mut client = clickhouse::Client::default()
@@ -125,8 +139,107 @@ struct CapturedFrame {
 }
 
 fn lookup_device_by_name(name: &str) -> Option<Device> {
-    Device::list().ok()?.into_iter().find(|d| d.name == name)
+    if name.trim().is_empty() {
+        return None;
+    }
+
+    // 1) Treat numeric value as 1-based index into Device::list().
+    if let Ok(idx) = name.trim().parse::<usize>() {
+        if let Ok(devices) = Device::list() {
+            if idx >= 1 && idx <= devices.len() {
+                let dev = devices.into_iter().nth(idx - 1)?;
+                tracing::info!(
+                    index = idx,
+                    dev_name = %dev.name,
+                    dev_desc = ?dev.desc,
+                    "live: resolved interface by index"
+                );
+                return Some(dev);
+            } else {
+                tracing::warn!(
+                    index = idx,
+                    total = devices.len(),
+                    "live: interface index out of range"
+                );
+            }
+        } else {
+            tracing::error!("live: failed to list pcap devices while resolving index");
+        }
+    }
+
+    // 2) Exact name match (works on Linux & Windows).
+    if let Ok(devices) = Device::list() {
+        if let Some(dev) = devices.into_iter().find(|d| d.name == name) {
+            tracing::info!(
+                iface = name,
+                dev_name = %dev.name,
+                dev_desc = ?dev.desc,
+                "live: resolved interface by exact name"
+            );
+            return Some(dev);
+        }
+    }
+
+    let needle = name.to_ascii_lowercase();
+
+    // 3) Windows-specific: match description or partial internal name/GUID.
+    #[cfg(target_os = "windows")]
+    {
+        if let Ok(devices) = Device::list() {
+            if let Some(dev) = devices.into_iter().find(|d| {
+                d.desc
+                    .as_deref()
+                    .map(|desc| desc.to_ascii_lowercase().contains(&needle))
+                    .unwrap_or(false)
+            }) {
+                tracing::info!(
+                    iface = name,
+                    dev_name = %dev.name,
+                    dev_desc = ?dev.desc,
+                    "live: resolved Windows interface by description"
+                );
+                return Some(dev);
+            }
+        }
+
+        if let Ok(devices) = Device::list() {
+            if let Some(dev) = devices.into_iter().find(|d| {
+                d.name.to_ascii_lowercase().contains(&needle)
+            }) {
+                tracing::info!(
+                    iface = name,
+                    dev_name = %dev.name,
+                    dev_desc = ?dev.desc,
+                    "live: resolved Windows interface by partial name"
+                );
+                return Some(dev);
+            }
+        }
+    }
+
+    // 4) Fallback fuzzy match on any platform (name or description).
+    if let Ok(devices) = Device::list() {
+        if let Some(dev) = devices.into_iter().find(|d| {
+            d.name.to_ascii_lowercase().contains(&needle)
+                || d.desc
+                    .as_deref()
+                    .map(|desc| desc.to_ascii_lowercase().contains(&needle))
+                    .unwrap_or(false)
+        }) {
+            tracing::info!(
+                iface = name,
+                dev_name = %dev.name,
+                dev_desc = ?dev.desc,
+                "live: resolved interface by fuzzy match"
+            );
+            return Some(dev);
+        }
+    }
+
+    tracing::warn!(iface = name, "live: failed to resolve interface via Device::list()");
+    None
 }
+
 
 fn capture_loop(
     iface: String,
@@ -138,13 +251,28 @@ fn capture_loop(
 ) -> anyhow::Result<()> {
     // Build & open
     let mut cap = {
-        let inactive = if iface.is_empty() {
-            let dev =
-                Device::lookup()?.ok_or_else(|| anyhow::anyhow!("No default capture device"))?;
+        let inactive = if iface.trim().is_empty() {
+            let dev = Device::lookup()?
+                .ok_or_else(|| anyhow::anyhow!("No default capture device"))?;
+            tracing::info!(
+                dev_name = %dev.name,
+                dev_desc = ?dev.desc,
+                "live: using default capture device"
+            );
             Capture::from_device(dev)?
         } else if let Some(dev) = lookup_device_by_name(&iface) {
+            tracing::info!(
+                iface = %iface,
+                dev_name = %dev.name,
+                dev_desc = ?dev.desc,
+                "live: using resolved capture device"
+            );
             Capture::from_device(dev)?
         } else {
+            tracing::warn!(
+                iface = %iface,
+                "live: could not resolve interface, falling back to raw name for pcap"
+            );
             Capture::from_device(iface.as_str())?
         };
 
@@ -155,6 +283,7 @@ fn capture_loop(
             .immediate_mode(true)
             .open()?
     };
+
 
     cap = cap.setnonblock()?;
     // Datalink log (optional)

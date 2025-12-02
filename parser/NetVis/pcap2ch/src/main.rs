@@ -66,7 +66,9 @@ async fn main() -> anyhow::Result<()> {
             };
             live::run(opts).await?;
         }
+        cli::Cmd::Ifaces => {
+                    live::list_interfaces()?;
+        }
     }
-
     Ok(())
 }

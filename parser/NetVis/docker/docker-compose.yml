@@ -1,0 +1,57 @@
+version: "3.9"
+
+name: netvis-stack
+
+services:
+  clickhouse:
+    image: clickhouse/clickhouse-server:latest
+    container_name: clickhouse
+    restart: unless-stopped
+    environment:
+      CLICKHOUSE_DB: ${CLICKHOUSE_DB}
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD}
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: "1"
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8123/ping | grep -q 'Ok'"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    volumes:
+      - clickhouse-data:/var/lib/clickhouse
+      - clickhouse-logs:/var/log/clickhouse-server
+    networks:
+      - netvis
+
+  netvis:
+    image: ubuntu:22.04
+    container_name: netvis-dev
+    working_dir: /netvis
+    stdin_open: true
+    tty: true
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    volumes:
+      - ../:/netvis # mounts your entire project
+    networks:
+      - netvis
+    command: [bash, /netvis/docker/netvis-entry.sh]
+
+networks:
+  netvis:
+    driver: bridge
+
+volumes:
+  clickhouse-data:
+  clickhouse-logs:

@@ -20,7 +20,7 @@ pub struct Cli {
     pub ch_raw_table: String,
 
     /// ClickHouse user
-    #[arg(long, env = "CH_USER", default_value = "default")]
+    #[arg(long, env = "CH_USER", default_value = "capstone")]
     pub ch_user: String,
 
     /// ClickHouse password
@@ -48,7 +48,7 @@ pub enum Cmd {
         #[arg(long, default_value_t = 5_000)]
         batch_size: usize,
     },
-    /// Live capture (to be implemented later)
+    /// Live capture
     Live {
         #[arg(long)]
         iface: String,
@@ -59,4 +59,6 @@ pub enum Cmd {
         #[arg(long, default_value_t = 10_000)]
         batch_size: usize,
     },
+    /// List available capture interfaces
+    Ifaces,
 }
