@@ -30,8 +30,8 @@ public class InfoPannelController : MonoBehaviour
             $"<b>Degree:</b> {node.degree}\n" +
             $"<b>IP Adress:</b> {ips}\n" +
             $"<b>Source Ports:</b> {src_ports}\n" +
-            $"<b>Layer 7:</b> {l7_protos}\n" +
-            $"<b>Device Type:</b> {node.device_type}\n";
+            $"<b>Layer 7:</b> {l7_protos}\n"; // +
+            //$"<b>Device Type:</b> {node.device_type}\n";
     }
 
     public void setText(ConnectionInfo data)
