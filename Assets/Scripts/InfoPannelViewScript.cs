@@ -4,8 +4,8 @@ public class InfoPannelViewScript : MonoBehaviour
 {
     [SerializeField] private Camera cam;
 
-    public float zDistance = 2f;       // forward distance from camera
-    public Vector2 margin = new Vector2(0.17f, 0.18f); // right & bottom margins
+    public float zDistance = 1f;       // forward distance from camera
+    public Vector2 margin = new Vector2(0.35f, 0.25f); // right & bottom margins
     public float moveSpeed = 10f;
     public float rotateSpeed = 12f;
 
