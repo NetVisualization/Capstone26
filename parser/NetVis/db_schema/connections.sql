@@ -1,6 +1,6 @@
 CREATE DATABASE IF NOT EXISTS net;
 
-/* DROP old undirected artifacts (safe if present) */
+/* DROP old artifacts (safe if present) */
 DROP VIEW IF EXISTS net.display_connections;
 DROP VIEW IF EXISTS net.connections;
 DROP VIEW IF EXISTS net.mv_packets_to_connections;
@@ -33,37 +33,80 @@ CREATE TABLE net.connections_state
 
 /* Materialized view: map each packet into its directed bucket */
 CREATE MATERIALIZED VIEW net.mv_packets_to_connections
-    TO net.connections_state AS
-    SELECT
-        minState(ts) AS first_seen_state,
-        maxState(ts) AS last_seen_state,
-        src_mac,
-        dst_mac,
-        src_ip,
-        dst_ip,
+            TO net.connections_state AS
+SELECT
+    minState(ts) AS first_seen_state,
+    maxState(ts) AS last_seen_state,
+    src_mac,
+    dst_mac,
+    src_ip,
+    dst_ip,
 
-        countState() AS pkts_state,
-        sumState(toUInt64(packet_len)) AS bytes_state,
-        groupUniqArrayState(toUInt8(l4_proto)) AS l4_state,
+    countState() AS pkts_state,
+    sumState(toUInt64(packet_len)) AS bytes_state,
+    groupUniqArrayState(toUInt8(l4_proto)) AS l4_state,
 
-        /* collect both sides explicitly */
-        groupUniqArrayStateIf(assumeNotNull(src_port), src_port IS NOT NULL) AS src_ports_state,
-        groupUniqArrayStateIf(assumeNotNull(dst_port), dst_port IS NOT NULL) AS dst_ports_state,
+    /* collect both sides explicitly */
+    groupUniqArrayStateIf(assumeNotNull(src_port), src_port IS NOT NULL) AS src_ports_state,
+    groupUniqArrayStateIf(assumeNotNull(dst_port), dst_port IS NOT NULL) AS dst_ports_state,
 
-        /* keep the exact Enum16 from packets.l7_proto */
-        groupUniqArrayState(l7_proto) AS l7_state
-    FROM net.packets
-    GROUP BY src_mac, dst_mac, src_ip, dst_ip;
+    /* keep the exact Enum16 from packets.l7_proto */
+    groupUniqArrayState(l7_proto) AS l7_state
+FROM net.packets
+GROUP BY src_mac, dst_mac, src_ip, dst_ip;
 
 /* User-facing directed view */
 CREATE OR REPLACE VIEW net.connections AS
 SELECT
     minMerge(first_seen_state) AS first_seen,
     maxMerge(last_seen_state) AS last_seen,
+
     src_mac,
     dst_mac,
     src_ip,
     dst_ip,
+
+    /* Vendor enrichment (computed from MAC) — OUI as UInt32 */
+    dictGetUInt32OrDefault(
+            'net.oui_dict', 'vendor_id',
+            (
+                toUInt32(reinterpretAsUInt8(substring(src_mac, 1, 1))) * 65536 +
+                toUInt32(reinterpretAsUInt8(substring(src_mac, 2, 1))) * 256 +
+                toUInt32(reinterpretAsUInt8(substring(src_mac, 3, 1)))
+                ),
+            0
+    ) AS src_vendor_id,
+
+    dictGetUInt32OrDefault(
+            'net.oui_dict', 'vendor_id',
+            (
+                toUInt32(reinterpretAsUInt8(substring(dst_mac, 1, 1))) * 65536 +
+                toUInt32(reinterpretAsUInt8(substring(dst_mac, 2, 1))) * 256 +
+                toUInt32(reinterpretAsUInt8(substring(dst_mac, 3, 1)))
+                ),
+            0
+    ) AS dst_vendor_id,
+
+    dictGetStringOrDefault(
+            'net.oui_dict', 'vendor',
+            (
+                toUInt32(reinterpretAsUInt8(substring(src_mac, 1, 1))) * 65536 +
+                toUInt32(reinterpretAsUInt8(substring(src_mac, 2, 1))) * 256 +
+                toUInt32(reinterpretAsUInt8(substring(src_mac, 3, 1)))
+                ),
+            'Unknown'
+    ) AS src_vendor,
+
+    dictGetStringOrDefault(
+            'net.oui_dict', 'vendor',
+            (
+                toUInt32(reinterpretAsUInt8(substring(dst_mac, 1, 1))) * 65536 +
+                toUInt32(reinterpretAsUInt8(substring(dst_mac, 2, 1))) * 256 +
+                toUInt32(reinterpretAsUInt8(substring(dst_mac, 3, 1)))
+                ),
+            'Unknown'
+    ) AS dst_vendor,
+
     countMerge(pkts_state) AS pkts,
     sumMerge(bytes_state) AS bytes,
     arraySort(groupUniqArrayMerge(l4_state)) AS protos,
@@ -73,24 +116,35 @@ SELECT
 FROM net.connections_state
 GROUP BY src_mac, dst_mac, src_ip, dst_ip;
 
-/* Pretty formatter for MACs (same helper as before) */
-CREATE FUNCTION IF NOT EXISTS format_mac AS (x) ->
-    concat(
-        lower(substring(hex(x), 1, 2)),  ':',
-        lower(substring(hex(x), 3, 2)),  ':',
-        lower(substring(hex(x), 5, 2)),  ':',
-        lower(substring(hex(x), 7, 2)),  ':',
-        lower(substring(hex(x), 9, 2)),  ':',
-        lower(substring(hex(x),11, 2))
-    );
-
-/* Readable version with colon MACs */
+/* Readable version with colon MACs (inline formatting; no CREATE FUNCTION) */
 CREATE OR REPLACE VIEW net.display_connections AS
 SELECT
     first_seen,
     last_seen,
-    format_mac(src_mac) AS src_mac,
-    format_mac(dst_mac) AS dst_mac,
+
+    concat(
+            lower(substring(hex(src_mac), 1, 2)), ':',
+            lower(substring(hex(src_mac), 3, 2)), ':',
+            lower(substring(hex(src_mac), 5, 2)), ':',
+            lower(substring(hex(src_mac), 7, 2)), ':',
+            lower(substring(hex(src_mac), 9, 2)), ':',
+            lower(substring(hex(src_mac), 11, 2))
+    ) AS src_mac,
+
+    concat(
+            lower(substring(hex(dst_mac), 1, 2)), ':',
+            lower(substring(hex(dst_mac), 3, 2)), ':',
+            lower(substring(hex(dst_mac), 5, 2)), ':',
+            lower(substring(hex(dst_mac), 7, 2)), ':',
+            lower(substring(hex(dst_mac), 9, 2)), ':',
+            lower(substring(hex(dst_mac), 11, 2))
+    ) AS dst_mac,
+
+    src_vendor_id,
+    dst_vendor_id,
+    src_vendor,
+    dst_vendor,
+
     src_ip,
     dst_ip,
     pkts,
