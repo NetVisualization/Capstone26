@@ -15,6 +15,9 @@ CREATE TABLE net.packets
 
     l7_proto UInt16 DEFAULT 0,
 
+    src_vendor LowCardinality(String),
+    dst_vendor LowCardinality(String),
+
     src_port Nullable(UInt16),
     dst_port Nullable(UInt16),
     packet_len UInt32,

@@ -11,6 +11,8 @@ use crate::summary::summarize_packet;
 use crate::util::{CaptureFormat, read_all, sniff_format};
 use chrono::{DateTime, Utc};
 
+use pcap2ch::classify_vendor;
+
 pub fn parse_frame_to_records(ts: DateTime<Utc>, bytes: &[u8]) -> Option<(DbPacket, DbRawBytes)> {
     let sp = SlicedPacket::from_ethernet(bytes).ok()?;
 
@@ -233,6 +235,8 @@ fn build_record_from_slice(
         None => {
             rec.l4_proto = L4Proto::None;
             rec.l7_proto = L7Proto::UNKNOWN;
+            rec.src_vendor = Some(classify_vendor(&rec.src_mac).to_string());
+            rec.dst_vendor = Some(classify_vendor(&rec.dst_mac).to_string());
         }
     }
 

@@ -64,6 +64,9 @@ pub struct PacketRecord {
     pub l4_proto: L4Proto,
     pub l7_proto: L7Proto,
 
+    pub src_vendor: Option<String>,
+    pub dst_vendor: Option<String>,
+
     /// Nullable ports — use None when not TCP/UDP
     pub src_port: Option<u16>,
     pub dst_port: Option<u16>,
@@ -91,6 +94,9 @@ impl Default for PacketRecord {
 
             l4_proto: L4Proto::None,
             l7_proto: L7Proto::UNKNOWN,
+
+            src_vendor: None,
+            dst_vendor: None,
 
             src_port: None,
             dst_port: None,
@@ -165,6 +171,19 @@ pub fn classify_l7(port_opt: Option<u16>, l4: L4Proto) -> L7Proto {
             _ => UNKNOWN,
         },
         Icmp | Icmpv6 | None | Sctp => UNKNOWN,
+    }
+}
+
+pub fn classify_vendor(mac: &[u8; 6]) -> &'static str {
+    // Locally administered / randomized
+    if (mac[0] & 0b0000_0010) != 0 {
+        return "Locally Administered";
+    }
+
+    match (mac[0], mac[1], mac[2]) {
+        (0x00, 0x1A, 0x2B) => "Example Vendor",
+        (0xF4, 0xCE, 0x36) => "Apple",
+        _ => "Unknown",
     }
 }
 
