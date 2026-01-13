@@ -15,8 +15,8 @@ CREATE TABLE net.packets
 
     l7_proto UInt16 DEFAULT 0,
 
-    src_vendor LowCardinality(String),
-    dst_vendor LowCardinality(String),
+    src_vendor LowCardinality(String) DEFAULT 'Unknown',
+    dst_vendor LowCardinality(String) DEFAULT 'Unknown',
 
     src_port Nullable(UInt16),
     dst_port Nullable(UInt16),
@@ -51,6 +51,8 @@ SELECT
     format_mac(dst_mac) AS dst_mac,
     l4_proto,
     l7_proto,
+    src_vendor,
+    dst_vendor,
     src_port,
     dst_port,
     packet_len,

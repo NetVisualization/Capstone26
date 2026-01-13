@@ -235,8 +235,8 @@ fn build_record_from_slice(
         None => {
             rec.l4_proto = L4Proto::None;
             rec.l7_proto = L7Proto::UNKNOWN;
-            rec.src_vendor = Some(classify_vendor(&rec.src_mac).to_string());
-            rec.dst_vendor = Some(classify_vendor(&rec.dst_mac).to_string());
+            rec.src_vendor = classify_vendor(&rec.src_mac).to_string();
+            rec.dst_vendor = classify_vendor(&rec.dst_mac).to_string();
         }
     }
 

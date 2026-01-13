@@ -64,8 +64,8 @@ pub struct PacketRecord {
     pub l4_proto: L4Proto,
     pub l7_proto: L7Proto,
 
-    pub src_vendor: Option<String>,
-    pub dst_vendor: Option<String>,
+    pub src_vendor: String,
+    pub dst_vendor: String,
 
     /// Nullable ports — use None when not TCP/UDP
     pub src_port: Option<u16>,
@@ -95,8 +95,8 @@ impl Default for PacketRecord {
             l4_proto: L4Proto::None,
             l7_proto: L7Proto::UNKNOWN,
 
-            src_vendor: None,
-            dst_vendor: None,
+            src_vendor: String::new(),
+            dst_vendor: String::new(),
 
             src_port: None,
             dst_port: None,
@@ -174,19 +174,6 @@ pub fn classify_l7(port_opt: Option<u16>, l4: L4Proto) -> L7Proto {
     }
 }
 
-pub fn classify_vendor(mac: &[u8; 6]) -> &'static str {
-    // Locally administered / randomized
-    if (mac[0] & 0b0000_0010) != 0 {
-        return "Locally Administered";
-    }
-
-    match (mac[0], mac[1], mac[2]) {
-        (0x00, 0x1A, 0x2B) => "Example Vendor",
-        (0xF4, 0xCE, 0x36) => "Apple",
-        _ => "Unknown",
-    }
-}
-
 /// Utility: format 6-byte MAC as lowercase hex (for logs/diagnostics only).
 pub fn mac_hex(mac: &[u8; 6]) -> String {
     let mut s = String::with_capacity(12);
@@ -195,4 +182,32 @@ pub fn mac_hex(mac: &[u8; 6]) -> String {
         let _ = write!(&mut s, "{:02x}", b);
     }
     s
+}
+
+// Pull in the generated OUI_MAP at build time.
+// This file is created by build.rs in Cargo's OUT_DIR.
+include!(concat!(env!("OUT_DIR"), "/vendor_map.rs"));
+
+#[inline]
+pub fn oui24_u32(mac: &[u8; 6]) -> u32 {
+    (mac[0] as u32) * 65536 + (mac[1] as u32) * 256 + (mac[2] as u32)
+}
+
+#[inline]
+pub fn is_locally_administered(mac: &[u8; 6]) -> bool {
+    (mac[0] & 0b0000_0010) != 0
+}
+
+pub fn vendor_from_oui(oui: u32) -> &'static str {
+    match OUI_MAP.binary_search_by_key(&oui, |(k, _)| *k) {
+        Ok(i) => OUI_MAP[i].1,
+        Err(_) => "Unknown",
+    }
+}
+
+pub fn classify_vendor(mac: &[u8; 6]) -> &'static str {
+    if is_locally_administered(mac) {
+        return "Locally Administered";
+    }
+    vendor_from_oui(oui24_u32(mac))
 }
