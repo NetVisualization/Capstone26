@@ -1,13 +1,33 @@
 CREATE DATABASE IF NOT EXISTS net;
 
--- Replace any previous nodes / display_nodes objects
 DROP VIEW IF EXISTS net.display_nodes;
 DROP VIEW IF EXISTS net.nodes;
 
--- Every MAC from src **or** dst becomes a node; aggregation is done on-the-fly.
 CREATE OR REPLACE VIEW net.nodes AS
 SELECT
     mac,
+
+    /* Vendor enrichment — OUI as UInt32 */
+    dictGetUInt32OrDefault(
+            'net.oui_dict', 'vendor_id',
+            (
+                toUInt32(reinterpretAsUInt8(substring(mac, 1, 1))) * 65536 +
+                toUInt32(reinterpretAsUInt8(substring(mac, 2, 1))) * 256 +
+                toUInt32(reinterpretAsUInt8(substring(mac, 3, 1)))
+                ),
+            0
+    ) AS vendor_id,
+
+    dictGetStringOrDefault(
+            'net.oui_dict', 'vendor',
+            (
+                toUInt32(reinterpretAsUInt8(substring(mac, 1, 1))) * 65536 +
+                toUInt32(reinterpretAsUInt8(substring(mac, 2, 1))) * 256 +
+                toUInt32(reinterpretAsUInt8(substring(mac, 3, 1)))
+                ),
+            'Unknown'
+    ) AS vendor,
+
     count() AS pkts,
     sum(packet_len) AS bytes,
     min(ts) AS first_seen,
@@ -19,7 +39,6 @@ SELECT
     CAST(NULL AS Nullable(String)) AS device_type
 FROM
     (
-        -- src branch: peers = dst_mac, ips = src_ip, src_ports set, l7 as UInt16
         SELECT
             src_mac AS mac,
             dst_mac AS peers,
@@ -28,36 +47,36 @@ FROM
             toUInt16(l7_proto) AS l7_protos,
             ts,
             toUInt64(packet_len) AS packet_len
-        FROM net.packets UNION ALL
+        FROM net.packets
 
-        -- dst branch: peers = src_mac, ips = dst_ip, no egress ports (0 sentinel), l7 as UInt16
+        UNION ALL
+
         SELECT
             dst_mac AS mac,
             src_mac AS peers,
             dst_ip AS ips,
-            toUInt16(0) AS src_ports,   -- excluded by the IF in the outer aggregate
+            toUInt16(0) AS src_ports,
             toUInt16(l7_proto) AS l7_protos,
             ts,
             toUInt64(packet_len) AS packet_len
         FROM net.packets
-    )
+        )
 GROUP BY mac;
 
--- Formatting helper (unchanged)
-CREATE FUNCTION IF NOT EXISTS format_mac AS (x) ->
-    concat(
-        lower(substring(hex(x), 1, 2)),  ':',
-        lower(substring(hex(x), 3, 2)),  ':',
-        lower(substring(hex(x), 5, 2)),  ':',
-        lower(substring(hex(x), 7, 2)),  ':',
-        lower(substring(hex(x), 9, 2)),  ':',
-        lower(substring(hex(x),11, 2))
-    );
-
--- Readability view
+/* Readability view (inline formatting; no CREATE FUNCTION) */
 CREATE OR REPLACE VIEW net.display_nodes AS
 SELECT
-    format_mac(mac) AS mac,
+    concat(
+            lower(substring(hex(mac), 1, 2)), ':',
+            lower(substring(hex(mac), 3, 2)), ':',
+            lower(substring(hex(mac), 5, 2)), ':',
+            lower(substring(hex(mac), 7, 2)), ':',
+            lower(substring(hex(mac), 9, 2)), ':',
+            lower(substring(hex(mac), 11, 2))
+    ) AS mac,
+
+    vendor_id,
+    vendor,
     pkts,
     bytes,
     first_seen,

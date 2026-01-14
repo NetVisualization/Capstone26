@@ -1,7 +1,37 @@
+-- mac_vendors.sql
+DROP DICTIONARY IF EXISTS net.oui_dict;
+DROP TABLE IF EXISTS net.oui_vendors;
+
+-- OUI stored as 24-bit integer in a UInt32:
+-- oui_u32 = (b1<<16) | (b2<<8) | b3
+CREATE TABLE net.oui_vendors
+(
+    oui_u32 UInt32,
+    vendor_id UInt32,
+    vendor String
+)
+ENGINE = MergeTree
+ORDER BY (oui_u32);
+
+CREATE DICTIONARY net.oui_dict
+(
+    oui_u32 UInt32,
+    vendor_id UInt32,
+    vendor String
+)
+PRIMARY KEY oui_u32_u32
+SOURCE(CLICKHOUSE(DB 'net' TABLE 'oui_vendors'))
+LAYOUT(HASHED())
+LIFETIME(MIN 300 MAX 3600);
+
+
+
 -- packets.sql
 CREATE DATABASE IF NOT EXISTS net;
 
-CREATE TABLE IF NOT EXISTS net.packets
+DROP TABLE IF EXISTS net.packets;
+
+CREATE TABLE net.packets
 (
     packet_id UUID DEFAULT generateUUIDv4(),
     ts DateTime64(6, 'UTC'),
@@ -9,6 +39,17 @@ CREATE TABLE IF NOT EXISTS net.packets
     dst_ip IPv6,
     src_mac FixedString(6),
     dst_mac FixedString(6),
+
+    /* OUI (first 3 bytes) */
+    src_oui_u32 UInt32 MATERIALIZED ((toUInt32(byteAt(src_mac, 1)) << 16) | (toUInt32(byteAt(src_mac, 2)) << 8) | toUInt32(byteAt(src_mac, 3))),
+    dst_oui_u32 UInt32 MATERIALIZED ((toUInt32(byteAt(dst_mac, 1)) << 16) | (toUInt32(byteAt(dst_mac, 2)) << 8) | toUInt32(byteAt(dst_mac, 3))),
+
+    /* Vendor enrichment (requires net.oui_dict to exist) */
+    src_vendor_id UInt32 MATERIALIZED dictGetUInt32OrDefault('net.oui_dict', 'vendor_id', src_oui_u32, 0),
+    dst_vendor_id UInt32 MATERIALIZED dictGetUInt32OrDefault('net.oui_dict', 'vendor_id', dst_oui_u32, 0),
+
+    src_vendor String MATERIALIZED dictGetStringOrDefault('net.oui_dict', 'vendor', src_oui_u32, 'Unknown'),
+    dst_vendor String MATERIALIZED dictGetStringOrDefault('net.oui_dict', 'vendor', dst_oui_u32, 'Unknown'),
 
     l4_proto Enum16('NONE' = 0, 'ICMP' = 1, 'TCP' = 6, 'UDP' = 17, 'SCTP' = 132),
 
@@ -18,12 +59,11 @@ CREATE TABLE IF NOT EXISTS net.packets
     dst_port Nullable(UInt16),
     packet_len UInt32,
     info String DEFAULT '' CODEC(ZSTD(6))
-
 )
-    ENGINE = MergeTree
-        PARTITION BY toDate(ts)
-        ORDER BY (ts, src_ip, dst_ip, packet_id)
-        SETTINGS index_granularity = 8192;
+ENGINE = MergeTree
+PARTITION BY toDate(ts)
+ORDER BY (ts, src_ip, dst_ip, packet_id)
+SETTINGS index_granularity = 8192;
 
 /* Helper to render FixedString(6) -> "aa:bb:cc:dd:ee:ff" */
 CREATE FUNCTION IF NOT EXISTS format_mac AS (x) ->
@@ -45,6 +85,13 @@ SELECT
     dst_ip,
     format_mac(src_mac) AS src_mac,
     format_mac(dst_mac) AS dst_mac,
+
+    /* Vendor fields exposed for frontend */
+    src_vendor_id,
+    dst_vendor_id,
+    src_vendor,
+    dst_vendor,
+
     l4_proto,
     l7_proto,
     src_port,
@@ -52,6 +99,8 @@ SELECT
     packet_len,
     info
 FROM net.packets;
+
+
 
 -- connections.sql
 /* DROP old undirected artifacts (safe if present) */
@@ -61,7 +110,7 @@ DROP VIEW IF EXISTS net.mv_packets_to_connections;
 DROP TABLE IF EXISTS net.connections_state;
 
 /* Directed state, keyed by src/dst MAC + IP */
-CREATE TABLE IF NOT EXISTS net.connections_state
+CREATE TABLE net.connections_state
 (
     /* key (directed) */
     src_mac FixedString(6),
@@ -82,42 +131,63 @@ CREATE TABLE IF NOT EXISTS net.connections_state
 
     l7_state AggregateFunction(groupUniqArray, UInt16)
 )
-    ENGINE = AggregatingMergeTree
-        ORDER BY (src_mac, dst_mac, src_ip, dst_ip);
+ENGINE = AggregatingMergeTree
+ORDER BY (src_mac, dst_mac, src_ip, dst_ip);
 
 /* Materialized view: map each packet into its directed bucket */
 CREATE MATERIALIZED VIEW net.mv_packets_to_connections
-    TO net.connections_state AS
-    SELECT
-        minState(ts) AS first_seen_state,
-        maxState(ts) AS last_seen_state,
-        src_mac,
-        dst_mac,
-        src_ip,
-        dst_ip,
+TO net.connections_state AS
+SELECT
+    minState(ts) AS first_seen_state,
+    maxState(ts) AS last_seen_state,
+    src_mac,
+    dst_mac,
+    src_ip,
+    dst_ip,
 
-        countState() AS pkts_state,
-        sumState(toUInt64(packet_len)) AS bytes_state,
-        groupUniqArrayState(toUInt8(l4_proto)) AS l4_state,
+    countState() AS pkts_state,
+    sumState(toUInt64(packet_len)) AS bytes_state,
+    groupUniqArrayState(toUInt8(l4_proto)) AS l4_state,
 
-        /* collect both sides explicitly */
-        groupUniqArrayStateIf(assumeNotNull(src_port), src_port IS NOT NULL) AS src_ports_state,
-        groupUniqArrayStateIf(assumeNotNull(dst_port), dst_port IS NOT NULL) AS dst_ports_state,
+    /* collect both sides explicitly */
+    groupUniqArrayStateIf(assumeNotNull(src_port), src_port IS NOT NULL) AS src_ports_state,
+    groupUniqArrayStateIf(assumeNotNull(dst_port), dst_port IS NOT NULL) AS dst_ports_state,
 
-        /* keep the exact Enum16 from packets.l7_proto */
-        groupUniqArrayState(l7_proto) AS l7_state
-    FROM net.packets
-    GROUP BY src_mac, dst_mac, src_ip, dst_ip;
+    /* keep the exact Enum16 from packets.l7_proto */
+    groupUniqArrayState(l7_proto) AS l7_state
+FROM net.packets
+GROUP BY src_mac, dst_mac, src_ip, dst_ip;
 
 /* User-facing directed view */
 CREATE OR REPLACE VIEW net.connections AS
 SELECT
     minMerge(first_seen_state) AS first_seen,
     maxMerge(last_seen_state) AS last_seen,
+
     src_mac,
     dst_mac,
     src_ip,
     dst_ip,
+
+    /* Vendor enrichment (computed from MAC) */
+    dictGetUInt32OrDefault('net.oui_dict', 'vendor_id',
+        ((toUInt32(byteAt(src_mac, 1)) << 16) | (toUInt32(byteAt(src_mac, 2)) << 8) | toUInt32(byteAt(src_mac, 3))),
+        0
+    ) AS src_vendor_id,
+    dictGetUInt32OrDefault('net.oui_dict', 'vendor_id',
+        ((toUInt32(byteAt(dst_mac, 1)) << 16) | (toUInt32(byteAt(dst_mac, 2)) << 8) | toUInt32(byteAt(dst_mac, 3))),
+        0
+    ) AS dst_vendor_id,
+
+    dictGetStringOrDefault('net.oui_dict', 'vendor',
+        ((toUInt32(byteAt(src_mac, 1)) << 16) | (toUInt32(byteAt(src_mac, 2)) << 8) | toUInt32(byteAt(src_mac, 3))),
+        'Unknown'
+    ) AS src_vendor,
+    dictGetStringOrDefault('net.oui_dict', 'vendor',
+        ((toUInt32(byteAt(dst_mac, 1)) << 16) | (toUInt32(byteAt(dst_mac, 2)) << 8) | toUInt32(byteAt(dst_mac, 3))),
+        'Unknown'
+    ) AS dst_vendor,
+
     countMerge(pkts_state) AS pkts,
     sumMerge(bytes_state) AS bytes,
     arraySort(groupUniqArrayMerge(l4_state)) AS protos,
@@ -145,6 +215,12 @@ SELECT
     last_seen,
     format_mac(src_mac) AS src_mac,
     format_mac(dst_mac) AS dst_mac,
+
+    src_vendor_id,
+    dst_vendor_id,
+    src_vendor,
+    dst_vendor,
+
     src_ip,
     dst_ip,
     pkts,
@@ -155,9 +231,9 @@ SELECT
     l7_protos
 FROM net.connections;
 
--- nodes.sql
-CREATE DATABASE IF NOT EXISTS net;
 
+
+-- nodes.sql
 -- Replace any previous nodes / display_nodes objects
 DROP VIEW IF EXISTS net.display_nodes;
 DROP VIEW IF EXISTS net.nodes;
@@ -166,6 +242,17 @@ DROP VIEW IF EXISTS net.nodes;
 CREATE OR REPLACE VIEW net.nodes AS
 SELECT
     mac,
+
+    /* Vendor enrichment */
+    dictGetUInt32OrDefault('net.oui_dict', 'vendor_id',
+        ((toUInt32(byteAt(mac, 1)) << 16) | (toUInt32(byteAt(mac, 2)) << 8) | toUInt32(byteAt(mac, 3))),
+        0
+    ) AS vendor_id,
+    dictGetStringOrDefault('net.oui_dict', 'vendor',
+        ((toUInt32(byteAt(mac, 1)) << 16) | (toUInt32(byteAt(mac, 2)) << 8) | toUInt32(byteAt(mac, 3))),
+        'Unknown'
+    ) AS vendor,
+
     count() AS pkts,
     sum(packet_len) AS bytes,
     min(ts) AS first_seen,
@@ -176,29 +263,29 @@ SELECT
     arraySort(arrayDistinct(groupUniqArray(l7_protos))) AS l7_protos,
     CAST(NULL AS Nullable(String)) AS device_type
 FROM
-    (
-        -- src branch: peers = dst_mac, ips = src_ip, src_ports set, l7 as UInt16
-        SELECT
-            src_mac AS mac,
-            dst_mac AS peers,
-            src_ip  AS ips,
-            assumeNotNull(src_port) AS src_ports,
-            toUInt16(l7_proto) AS l7_protos,
-            ts,
-            toUInt64(packet_len) AS packet_len
-        FROM net.packets UNION ALL
+(
+    -- src branch: peers = dst_mac, ips = src_ip, src_ports set, l7 as UInt16
+    SELECT
+        src_mac AS mac,
+        dst_mac AS peers,
+        src_ip  AS ips,
+        assumeNotNull(src_port) AS src_ports,
+        toUInt16(l7_proto) AS l7_protos,
+        ts,
+        toUInt64(packet_len) AS packet_len
+    FROM net.packets UNION ALL
 
-        -- dst branch: peers = src_mac, ips = dst_ip, no egress ports (0 sentinel), l7 as UInt16
-        SELECT
-            dst_mac AS mac,
-            src_mac AS peers,
-            dst_ip AS ips,
-            toUInt16(0) AS src_ports,   -- excluded by the IF in the outer aggregate
-            toUInt16(l7_proto) AS l7_protos,
-            ts,
-            toUInt64(packet_len) AS packet_len
-        FROM net.packets
-    )
+    -- dst branch: peers = src_mac, ips = dst_ip, no egress ports (0 sentinel), l7 as UInt16
+    SELECT
+        dst_mac AS mac,
+        src_mac AS peers,
+        dst_ip AS ips,
+        toUInt16(0) AS src_ports,   -- excluded by the IF in the outer aggregate
+        toUInt16(l7_proto) AS l7_protos,
+        ts,
+        toUInt64(packet_len) AS packet_len
+    FROM net.packets
+)
 GROUP BY mac;
 
 -- Formatting helper (unchanged)
@@ -216,6 +303,8 @@ CREATE FUNCTION IF NOT EXISTS format_mac AS (x) ->
 CREATE OR REPLACE VIEW net.display_nodes AS
 SELECT
     format_mac(mac) AS mac,
+    vendor_id,
+    vendor,
     pkts,
     bytes,
     first_seen,
@@ -227,9 +316,13 @@ SELECT
     device_type
 FROM net.nodes;
 
+
+
 -- raw_bytes.sql
+DROP TABLE IF EXISTS net.raw_bytes;
+
 -- Stores the full captured bytes for each packet, keyed by packet_id
-CREATE TABLE IF NOT EXISTS net.raw_bytes
+CREATE TABLE net.raw_bytes
 (
     packet_id UUID,                               -- must match net.packets.packet_id
     ts DateTime64(6, 'UTC'),               -- keeps partitioning/time scans efficient
