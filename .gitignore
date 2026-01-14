@@ -136,6 +136,7 @@ UserSettings/
 *.csproj
 .idea/
 .vscode/
+.vsconfig
 *.unityproj
 *.suo
 *.tmp
@@ -148,6 +149,8 @@ UserSettings/
 *.mdb
 *.opendb
 *.VC.db
+app.config
+packages.config
 
 # OS Generated Junk
 .DS_Store
