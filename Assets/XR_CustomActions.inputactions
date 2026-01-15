@@ -1,0 +1,34 @@
+{
+    "name": "XR_CustomActions",
+    "maps": [
+        {
+            "name": "RightHand",
+            "id": "b98eae18-b1f7-4951-b254-f7a948101448",
+            "actions": [
+                {
+                    "name": "ToggleRayMode",
+                    "type": "Button",
+                    "id": "f2c1c75d-e988-40c0-85e9-6fa60d7e8a98",
+                    "expectedControlType": "Button",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": true
+                }
+            ],
+            "bindings": [
+                {
+                    "name": "",
+                    "id": "ae980970-0d7d-487e-b9f5-651bc6c9c224",
+                    "path": "<XRController>{RightHand}/primaryButton",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "ToggleRayMode",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                }
+            ]
+        }
+    ],
+    "controlSchemes": []
+}
