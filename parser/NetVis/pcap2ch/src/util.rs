@@ -30,6 +30,8 @@ pub fn sniff_format(buf: &[u8]) -> anyhow::Result<CaptureFormat> {
     }
 }
 
-pub fn escape_sql_single_quotes(s: &str) -> String {
-    s.replace('\'', "''")
+// Escape for ClickHouse VALUES string literals (single-quoted).
+// We escape backslash first, then single quotes.
+pub fn escape_sql_value(s: &str) -> String {
+    s.replace('\\', "\\\\").replace('\'', "\\'")
 }

@@ -1,4 +1,5 @@
 use clickhouse::Row;
+use pcap2ch::classify_vendor;
 use serde::Serialize;
 use uuid::Uuid;
 
@@ -13,6 +14,8 @@ pub struct DbPacket {
     pub dst_mac: [u8; 6], // FixedString(6)
     pub l4_proto: i16,    // Enum16 value
     pub l7_proto: i16,    // Enum16 value
+    pub src_vendor: String,
+    pub dst_vendor: String,
     pub src_port: Option<u16>,
     pub dst_port: Option<u16>,
     pub packet_len: u32,
@@ -30,6 +33,8 @@ impl DbPacket {
             dst_mac: rec.dst_mac,
             l4_proto: rec.l4_proto as i16,
             l7_proto: rec.l7_proto as i16,
+            src_vendor: classify_vendor(&rec.src_mac).to_string(),
+            dst_vendor: classify_vendor(&rec.dst_mac).to_string(),
             src_port: rec.src_port,
             dst_port: rec.dst_port,
             packet_len: rec.packet_len,
