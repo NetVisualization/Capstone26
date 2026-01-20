@@ -33,3 +33,7 @@ docker compose up -d netvis			# starts only the live traffic capture tool
 
 ## Further customization
 Authentication to the database uses credentials specified in the `docker-compose.yml` file. We recommend changing these from the defaults. Update the `CLICKHOUSE_USER` and `CLICKHOUSE_PASSWORD` variables on lines 12 and 13. Then update the credentials used in `Assets/Scripts/DBConnection.cs` by changing the `DB_USER` and `DB_PASSWORD` variables on lines 99 and 100.
+
+## Clearing Database
+The database persists when the containers are restarted by using a docker volume.  
+If you want to clear the data from the database, or rebuild the containers after modifying the schema, run `docker compose down --volumes` to delete the volumes from your host. Then follow the standard deployment process above.  

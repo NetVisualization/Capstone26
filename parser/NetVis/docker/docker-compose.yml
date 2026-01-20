@@ -27,7 +27,7 @@ services:
     volumes:
       - clickhouse-data:/var/lib/clickhouse
       - clickhouse-logs:/var/log/clickhouse-server
-      - ../docker/init_db.sql:/docker-entrypoint-initdb.d/init_db.sql
+      - ../db_schema/init_db.sql:/docker-entrypoint-initdb.d/init_db.sql
     networks:
       - netvis
 
