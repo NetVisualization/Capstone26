@@ -1,7 +1,9 @@
 -- packets.sql
 CREATE DATABASE IF NOT EXISTS net;
 
-CREATE TABLE IF NOT EXISTS net.packets
+DROP TABLE IF EXISTS net.packets;
+
+CREATE TABLE net.packets
 (
     packet_id UUID DEFAULT generateUUIDv4(),
     ts DateTime64(6, 'UTC'),
@@ -13,6 +15,9 @@ CREATE TABLE IF NOT EXISTS net.packets
     l4_proto Enum16('NONE' = 0, 'ICMP' = 1, 'TCP' = 6, 'UDP' = 17, 'SCTP' = 132),
 
     l7_proto UInt16 DEFAULT 0,
+
+    src_vendor LowCardinality(String) DEFAULT 'Unknown',
+    dst_vendor LowCardinality(String) DEFAULT 'Unknown',
 
     src_port Nullable(UInt16),
     dst_port Nullable(UInt16),
@@ -47,13 +52,18 @@ SELECT
     format_mac(dst_mac) AS dst_mac,
     l4_proto,
     l7_proto,
+    src_vendor,
+    dst_vendor,
     src_port,
     dst_port,
     packet_len,
     info
 FROM net.packets;
 
+
 -- connections.sql
+CREATE DATABASE IF NOT EXISTS net;
+
 /* DROP old undirected artifacts (safe if present) */
 DROP VIEW IF EXISTS net.display_connections;
 DROP VIEW IF EXISTS net.connections;
@@ -61,7 +71,7 @@ DROP VIEW IF EXISTS net.mv_packets_to_connections;
 DROP TABLE IF EXISTS net.connections_state;
 
 /* Directed state, keyed by src/dst MAC + IP */
-CREATE TABLE IF NOT EXISTS net.connections_state
+CREATE TABLE net.connections_state
 (
     /* key (directed) */
     src_mac FixedString(6),
@@ -155,6 +165,7 @@ SELECT
     l7_protos
 FROM net.connections;
 
+
 -- nodes.sql
 CREATE DATABASE IF NOT EXISTS net;
 
@@ -227,9 +238,14 @@ SELECT
     device_type
 FROM net.nodes;
 
+
 -- raw_bytes.sql
+CREATE DATABASE IF NOT EXISTS net;
+
+DROP TABLE IF EXISTS net.raw_bytes;
+
 -- Stores the full captured bytes for each packet, keyed by packet_id
-CREATE TABLE IF NOT EXISTS net.raw_bytes
+CREATE TABLE net.raw_bytes
 (
     packet_id UUID,                               -- must match net.packets.packet_id
     ts DateTime64(6, 'UTC'),               -- keeps partitioning/time scans efficient
