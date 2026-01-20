@@ -276,7 +276,6 @@ public class DBConnection : MonoBehaviour
             dbRecord.device_type = Convert.ToString(reader.GetValue(reader.GetOrdinal("device_type")));
 
             nodes.Add(dbRecord);
-            Debug.Log(dbRecord.mac);
         }
 
         return nodes;

@@ -7,7 +7,8 @@ using UnityEngine.XR.Interaction.Toolkit;
 
 public class showNodeInfo : MonoBehaviour
 {
-    [SerializeField] private NodeInfo data;
+    [SerializeField] private NodeInfo NodeData;
+    [SerializeField] private ConnectionInfo ConnectionData;
     [SerializeField] public InfoPannelController pannel;
     private XRBaseInteractable interactable;
     // Start is called before the first frame update
@@ -26,8 +27,8 @@ public class showNodeInfo : MonoBehaviour
     }
     private void OnEnable()
     {
-        
-            interactable.selectEntered.AddListener(OnSelect);
+
+        interactable.selectEntered.AddListener(OnSelect);
     }
     private void OnDisable()
     {
@@ -36,9 +37,20 @@ public class showNodeInfo : MonoBehaviour
 
     private void OnSelect(SelectEnterEventArgs args)
     {
-        if (pannel && data)
+        Debug.Log("selected something");
+        if (pannel && NodeData)
         {
-            pannel.setText(data);
+            Debug.Log("type node");
+            pannel.setText(NodeData);
+        }
+        else if (pannel && ConnectionData)
+        {
+            Debug.Log("type conn");
+            pannel.setText(ConnectionData);
+        }
+        else
+        {
+            Debug.Log("bad");
         }
     }
 }
