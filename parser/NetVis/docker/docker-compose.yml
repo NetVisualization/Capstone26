@@ -32,7 +32,9 @@ services:
       - netvis
 
   netvis:
-    image: ubuntu:22.04
+    build:
+      context: ../pcap2ch
+      dockerfile: Dockerfile
     container_name: netvis-dev
     working_dir: /netvis
     stdin_open: true
@@ -47,7 +49,7 @@ services:
       - ../:/netvis # mounts your entire project
     networks:
       - netvis
-    command: [bash, /netvis/docker/netvis-entry.sh]
+    command: [bash, /netvis/pcap2ch/netvis-entry.sh]
 
 networks:
   netvis:
