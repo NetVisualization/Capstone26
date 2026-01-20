@@ -3,40 +3,52 @@ use std::fs;
 use std::io::Write;
 use std::path::PathBuf;
 
-// Expect a CSV with: OUI_HEX,vendor_name
-// Example line: F4CE36,Apple
 fn main() {
     println!("cargo:rerun-if-changed=data/oui.csv");
 
     let csv_path = PathBuf::from("data/oui.csv");
-    let csv = fs::read_to_string(&csv_path)
-        .expect("failed to read data/oui.csv (expected CSV: OUI_HEX,vendor_name)");
+
+    // Use csv crate so quoted fields with commas (addresses) don't break parsing
+    let mut rdr = csv::ReaderBuilder::new()
+        .has_headers(true)
+        .from_path(&csv_path)
+        .expect("failed to open data/oui.csv (expected IEEE OUI CSV)");
+
+    let headers = rdr.headers().expect("failed to read CSV headers").clone();
+
+    let idx_assignment = headers
+        .iter()
+        .position(|h| h.trim() == "Assignment")
+        .expect("IEEE CSV missing 'Assignment' column");
+
+    let idx_org = headers
+        .iter()
+        .position(|h| h.trim() == "Organization Name")
+        .expect("IEEE CSV missing 'Organization Name' column");
 
     let mut entries: Vec<(u32, String)> = Vec::new();
 
-    for (i, line) in csv.lines().enumerate() {
-        let line = line.trim();
-        if line.is_empty() || line.starts_with('#') {
+    for (i, rec) in rdr.records().enumerate() {
+        let rec =
+            rec.unwrap_or_else(|e| panic!("data/oui.csv record {}: failed to parse: {}", i + 1, e));
+
+        let assignment = rec.get(idx_assignment).unwrap_or("").trim();
+        let vendor = rec.get(idx_org).unwrap_or("").trim();
+
+        // Only keep 24-bit OUIs (6 hex chars). MA-M / MA-S won't match your 3-byte lookup anyway.
+        if assignment.len() != 6 {
             continue;
         }
 
-        // Split into 2 fields max (vendor names can contain commas if you want to allow that later)
-        let mut parts = line.splitn(2, ',');
-        let oui_hex = parts.next().unwrap().trim();
-        let vendor = parts.next().unwrap_or("").trim();
-
-        if oui_hex.len() != 6 {
+        let oui = u32::from_str_radix(assignment, 16).unwrap_or_else(|_| {
             panic!(
-                "data/oui.csv line {}: OUI must be 6 hex chars, got {:?}",
+                "data/oui.csv record {}: invalid hex in Assignment: {:?}",
                 i + 1,
-                oui_hex
-            );
-        }
+                assignment
+            )
+        });
 
-        let oui = u32::from_str_radix(oui_hex, 16)
-            .unwrap_or_else(|_| panic!("data/oui.csv line {}: invalid hex {:?}", i + 1, oui_hex));
-
-        // Escape vendor string for Rust source output
+        // Escape vendor for Rust source output
         let vendor_escaped = vendor.replace('\\', "\\\\").replace('"', "\\\"");
         entries.push((oui, vendor_escaped));
     }
