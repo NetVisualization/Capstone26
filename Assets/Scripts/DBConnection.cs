@@ -31,8 +31,8 @@ public class DBConnection : MonoBehaviour
     public struct Node
     {
         public System.Net.NetworkInformation.PhysicalAddress mac;
-        public int pkts;
-        public int bytes;
+        public UInt64 pkts;
+        public UInt64 bytes;
         public DateTime first_seen;
         public DateTime last_seen;
         public int degree;
@@ -48,8 +48,8 @@ public class DBConnection : MonoBehaviour
     {
         public List<IPAddress> node_a;
         public List<IPAddress> node_b;
-        public int pkts;
-        public int bytes;
+        public UInt64 pkts;
+        public UInt64 bytes;
         public DateTime first_seen;
         public DateTime last_seen;
         public List<l4_proto> protos;
@@ -69,8 +69,8 @@ public class DBConnection : MonoBehaviour
         public PhysicalAddress node_a_macs;
         public PhysicalAddress node_b_macs;
         public l7_proto protocol;
-        public int pkts;
-        public int bytes;
+        public UInt64 pkts;
+        public UInt64 bytes;
         public DateTime first_seen;
         public GameObject node1;
         public GameObject node2;
@@ -263,10 +263,10 @@ public class DBConnection : MonoBehaviour
             Node dbRecord = new Node();
             string macHex = reader.GetString(reader.GetOrdinal("mac_hex"));
             dbRecord.mac = System.Net.NetworkInformation.PhysicalAddress.Parse(macHex);
-            dbRecord.pkts = Convert.ToInt32(reader.GetValue(reader.GetOrdinal("pkts")));
-            dbRecord.bytes = Convert.ToInt32(reader.GetValue(reader.GetOrdinal("bytes")));
-            dbRecord.first_seen = reader.GetDateTime(reader.GetOrdinal("first_seen"));
-            dbRecord.last_seen = reader.GetDateTime(reader.GetOrdinal("last_seen"));
+            dbRecord.pkts = Convert.ToUInt64(reader.GetValue(reader.GetOrdinal("pkts")));
+            dbRecord.bytes = Convert.ToUInt64(reader.GetValue(reader.GetOrdinal("bytes")));
+            dbRecord.first_seen = (DateTime)reader.GetDateTime(reader.GetOrdinal("first_seen"));
+            dbRecord.last_seen = (DateTime)reader.GetDateTime(reader.GetOrdinal("last_seen"));
             dbRecord.degree = Convert.ToInt32(reader.GetValue(reader.GetOrdinal("degree")));
             var ips = (System.Net.IPAddress[])reader["ips"];
             dbRecord.ips = ips.ToList();
@@ -336,8 +336,8 @@ public class DBConnection : MonoBehaviour
             dbRecord.node_b = ips.ToList();
             //dbRecord.node_a = (List<IPAddress>)reader.GetValue(reader.GetOrdinal("ip_a"));
             //dbRecord.node_b = (List<IPAddress>)reader.GetValue(reader.GetOrdinal("ip_b"));
-            dbRecord.pkts = Convert.ToInt32(reader.GetValue(reader.GetOrdinal("pkts")));
-            dbRecord.bytes = Convert.ToInt32(reader.GetValue(reader.GetOrdinal("bytes")));
+            dbRecord.pkts = Convert.ToUInt64(reader.GetValue(reader.GetOrdinal("pkts")));
+            dbRecord.bytes = Convert.ToUInt64(reader.GetValue(reader.GetOrdinal("bytes")));
             dbRecord.first_seen = reader.GetDateTime(reader.GetOrdinal("first_seen"));
             dbRecord.last_seen = reader.GetDateTime(reader.GetOrdinal("last_seen"));
             dbRecord.protos = new List<l4_proto>();
