@@ -32,9 +32,7 @@ services:
       - netvis
 
   netvis:
-    build:
-      context: ../pcap2ch
-      dockerfile: Dockerfile
+    image: ubuntu:22.04
     container_name: netvis-dev
     working_dir: /netvis
     stdin_open: true
