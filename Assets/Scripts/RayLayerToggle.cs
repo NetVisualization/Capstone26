@@ -12,6 +12,11 @@ public class RayLayerToggle : MonoBehaviour
     public InteractionLayerMask connectionsMask;
     public InteractionLayerMask bothMask;
 
+    [Header("Physics Raycast Masks")]
+    public LayerMask nodesRaycastMask;
+    public LayerMask connectionsRaycastMask;
+    public LayerMask bothRaycastMask;
+
     [Header("Input")]
     public InputActionReference toggleRayModeAction; // <-- drag your ToggleRayMode here
 
@@ -61,17 +66,29 @@ public class RayLayerToggle : MonoBehaviour
         Debug.Log($"Ray Mode: {mode}");
     }
 
-    private void ApplyMode()
-    {
-        if (!ray) return;
+private void ApplyMode()
+{
+    if (!ray) return;
 
-        ray.interactionLayers = mode switch
-        {
-            Mode.NodesOnly => nodesMask,
-            Mode.ConnectionsOnly => connectionsMask,
-            _ => bothMask
-        };
+    switch (mode)
+    {
+        case Mode.NodesOnly:
+            ray.interactionLayers = nodesMask;
+            ray.raycastMask = nodesRaycastMask;
+            break;
+
+        case Mode.ConnectionsOnly:
+            ray.interactionLayers = connectionsMask;
+            ray.raycastMask = connectionsRaycastMask;
+            break;
+
+        default:
+            ray.interactionLayers = bothMask;
+            ray.raycastMask = bothRaycastMask;
+            break;
     }
+}
+
      void Update()
     {
         if (!ray) return;
