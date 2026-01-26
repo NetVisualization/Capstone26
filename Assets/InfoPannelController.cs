@@ -21,6 +21,7 @@ public class InfoPannelController : MonoBehaviour
         string ips = string.Join(",", node.ips);
         string src_ports = string.Join(",", node.src_ports);
         string l7_protos = string.Join (",", node.l7_protos);
+        Debug.Log(node.device_type);
         infoText.text =
             $"<b>Mac Address:</b> {node.mac}\n" +
             $"<b># packets:</b> {node.pkts}\n" +
@@ -30,8 +31,8 @@ public class InfoPannelController : MonoBehaviour
             $"<b>Degree:</b> {node.degree}\n" +
             $"<b>IP Adress:</b> {ips}\n" +
             $"<b>Source Ports:</b> {src_ports}\n" +
-            $"<b>Layer 7:</b> {l7_protos}\n"; // +
-            //$"<b>Device Type:</b> {node.device_type}\n";
+            $"<b>Layer 7:</b> {l7_protos}\n" +
+            $"<b>Vendor: {node.device_type}\n";    
     }
 
     public void setText(ConnectionInfo data)

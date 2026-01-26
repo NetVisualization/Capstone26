@@ -16,7 +16,7 @@ SELECT
     arraySort(arrayDistinct(groupUniqArray(ips))) AS ips,
     arraySort(arrayDistinct(groupUniqArrayIf(src_ports, src_ports > 0))) AS src_ports,
     arraySort(arrayDistinct(groupUniqArray(l7_protos))) AS l7_protos,
-    CAST(NULL AS Nullable(String)) AS device_type
+    anyHeavy(vendor) AS device_type
 FROM
     (
         -- src branch: peers = dst_mac, ips = src_ip, src_ports set, l7 as UInt16
@@ -27,7 +27,8 @@ FROM
             assumeNotNull(src_port) AS src_ports,
             toUInt16(l7_proto) AS l7_protos,
             ts,
-            toUInt64(packet_len) AS packet_len
+            toUInt64(packet_len) AS packet_len,
+            src_vendor AS vendor
         FROM net.packets UNION ALL
 
         -- dst branch: peers = src_mac, ips = dst_ip, no egress ports (0 sentinel), l7 as UInt16
@@ -38,7 +39,8 @@ FROM
             toUInt16(0) AS src_ports,   -- excluded by the IF in the outer aggregate
             toUInt16(l7_proto) AS l7_protos,
             ts,
-            toUInt64(packet_len) AS packet_len
+            toUInt64(packet_len) AS packet_len,
+            dst_vendor AS vendor
         FROM net.packets
         )
 GROUP BY mac;

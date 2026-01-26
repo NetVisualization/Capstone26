@@ -1,7 +1,9 @@
--- packets.sql
 CREATE DATABASE IF NOT EXISTS net;
+-- packets.sql
 
-CREATE TABLE IF NOT EXISTS net.packets
+DROP TABLE IF EXISTS net.packets;
+
+CREATE TABLE net.packets
 (
     packet_id UUID DEFAULT generateUUIDv4(),
     ts DateTime64(6, 'UTC'),
@@ -13,6 +15,9 @@ CREATE TABLE IF NOT EXISTS net.packets
     l4_proto Enum16('NONE' = 0, 'ICMP' = 1, 'TCP' = 6, 'UDP' = 17, 'SCTP' = 132),
 
     l7_proto UInt16 DEFAULT 0,
+
+    src_vendor LowCardinality(String) DEFAULT 'Unknown',
+    dst_vendor LowCardinality(String) DEFAULT 'Unknown',
 
     src_port Nullable(UInt16),
     dst_port Nullable(UInt16),
@@ -47,11 +52,14 @@ SELECT
     format_mac(dst_mac) AS dst_mac,
     l4_proto,
     l7_proto,
+    src_vendor,
+    dst_vendor,
     src_port,
     dst_port,
     packet_len,
     info
 FROM net.packets;
+
 
 -- connections.sql
 /* DROP old undirected artifacts (safe if present) */
@@ -61,7 +69,7 @@ DROP VIEW IF EXISTS net.mv_packets_to_connections;
 DROP TABLE IF EXISTS net.connections_state;
 
 /* Directed state, keyed by src/dst MAC + IP */
-CREATE TABLE IF NOT EXISTS net.connections_state
+CREATE TABLE net.connections_state
 (
     /* key (directed) */
     src_mac FixedString(6),
@@ -155,9 +163,8 @@ SELECT
     l7_protos
 FROM net.connections;
 
--- nodes.sql
-CREATE DATABASE IF NOT EXISTS net;
 
+-- nodes.sql
 -- Replace any previous nodes / display_nodes objects
 DROP VIEW IF EXISTS net.display_nodes;
 DROP VIEW IF EXISTS net.nodes;
@@ -174,7 +181,7 @@ SELECT
     arraySort(arrayDistinct(groupUniqArray(ips))) AS ips,
     arraySort(arrayDistinct(groupUniqArrayIf(src_ports, src_ports > 0))) AS src_ports,
     arraySort(arrayDistinct(groupUniqArray(l7_protos))) AS l7_protos,
-    CAST(NULL AS Nullable(String)) AS device_type
+    anyHeavy(vendor) AS device_type
 FROM
     (
         -- src branch: peers = dst_mac, ips = src_ip, src_ports set, l7 as UInt16
@@ -185,7 +192,8 @@ FROM
             assumeNotNull(src_port) AS src_ports,
             toUInt16(l7_proto) AS l7_protos,
             ts,
-            toUInt64(packet_len) AS packet_len
+            toUInt64(packet_len) AS packet_len,
+            src_vendor AS vendor
         FROM net.packets UNION ALL
 
         -- dst branch: peers = src_mac, ips = dst_ip, no egress ports (0 sentinel), l7 as UInt16
@@ -196,7 +204,8 @@ FROM
             toUInt16(0) AS src_ports,   -- excluded by the IF in the outer aggregate
             toUInt16(l7_proto) AS l7_protos,
             ts,
-            toUInt64(packet_len) AS packet_len
+            toUInt64(packet_len) AS packet_len,
+            dst_vendor AS vendor
         FROM net.packets
         )
 GROUP BY mac;
@@ -227,9 +236,14 @@ SELECT
     device_type
 FROM net.nodes;
 
+
 -- raw_bytes.sql
+CREATE DATABASE IF NOT EXISTS net;
+
+DROP TABLE IF EXISTS net.raw_bytes;
+
 -- Stores the full captured bytes for each packet, keyed by packet_id
-CREATE TABLE IF NOT EXISTS net.raw_bytes
+CREATE TABLE net.raw_bytes
 (
     packet_id UUID,                               -- must match net.packets.packet_id
     ts DateTime64(6, 'UTC'),               -- keeps partitioning/time scans efficient

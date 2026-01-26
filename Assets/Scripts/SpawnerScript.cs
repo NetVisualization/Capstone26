@@ -163,7 +163,6 @@ public class NodeSpawnerScript : MonoBehaviour
         if (refreshTimer >= refreshInterval)
         {
             refreshTimer = 0f;
-            Debug.Log("Updating nodes");
             PollForNewTraffic();
         }
     }

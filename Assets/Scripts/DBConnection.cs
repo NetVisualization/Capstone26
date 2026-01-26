@@ -94,7 +94,7 @@ public class DBConnection : MonoBehaviour
     }
 
     public string DB_NAME = "net";
-    public string DB_HOST = "localhost";
+    public string DB_HOST = "10.200.1.13";
     public string DB_PORT = "8123";
     public string DB_USER = "capstone";
     public string DB_PASS = "boogle";
@@ -273,10 +273,8 @@ public class DBConnection : MonoBehaviour
             dbRecord.src_ports = (ushort[])reader.GetValue(reader.GetOrdinal("src_ports"));
             UInt16[] l7s = (UInt16[])reader.GetValue(reader.GetOrdinal("l7_protos"));
             dbRecord.l7_protos = intArrayToAppLayerList(l7s);
-            dbRecord.device_type = Convert.ToString(reader.GetValue(reader.GetOrdinal("device_type")));
-
+            dbRecord.device_type = reader.GetString(reader.GetOrdinal("device_type"));
             nodes.Add(dbRecord);
-            Debug.Log(dbRecord.mac);
         }
 
         return nodes;
