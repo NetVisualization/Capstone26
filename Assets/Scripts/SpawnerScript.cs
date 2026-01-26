@@ -65,6 +65,10 @@ public class NodeSpawnerScript : MonoBehaviour
     public Dictionary<string, GameObject> NodeObjects = new();            // MAC string -> GO
     public Dictionary<string, GameObject> ConnectionObjects = new();      // reserved
 
+    public IReadOnlyList<GameObject> Connections => spawnedConnections; // for use in other files
+    public IReadOnlyDictionary<string, GameObject> MacNodes => NodeObjects; // for filtering nodes by MAC
+
+
     List<DBConnection.Node> nodeList = new();
     List<DBConnection.Connection> ConnectionList = new();
     List<DBConnection.SubConnection> SubConnectionList = new();
@@ -287,6 +291,13 @@ public class NodeSpawnerScript : MonoBehaviour
                 if (a == null || b == null) continue;
 
                 GameObject edge = Instantiate(connectionPrefab);
+
+                var tag = edge.AddComponent<EdgeTag>();
+                tag.isMacMac = true;
+                tag.mac_a = sc.node_a_macs?.ToString();
+                tag.mac_b = sc.node_b_macs?.ToString();
+                tag.protocol = sc.protocol;
+
                 spawnedConnections.Add(edge);
 
                 // keep your parallel offset behavior
@@ -380,6 +391,13 @@ public class NodeSpawnerScript : MonoBehaviour
                 if (curvedEdgePrefab != null && curvedEdgePrefab.GetComponent<LineRenderer>() != null)
                 {
                     var edge = Instantiate(curvedEdgePrefab);
+
+                    var tag = edge.AddComponent<EdgeTag>();
+                    tag.isMacIp = true;
+                    tag.mac_a = ni.data.mac?.ToString();
+                    tag.ip = ip;
+                    tag.protocol = l7_proto.UNKNOWN;
+                    
                     spawnedConnections.Add(edge);
                     var lr = edge.GetComponent<LineRenderer>();
                     ApplyEdgeMaterial(lr, ConnectionMed);
@@ -388,6 +406,12 @@ public class NodeSpawnerScript : MonoBehaviour
                 else
                 {
                     var edge = Instantiate(connectionPrefab);
+                    var tag = edge.AddComponent<EdgeTag>();
+                    tag.isMacIp = true;
+                    tag.mac_a = ni.data.mac?.ToString();
+                    tag.ip = ip;
+                    tag.protocol = l7_proto.UNKNOWN;
+
                     spawnedConnections.Add(edge);
                     ConnectStraight(edge.transform, macGO.transform, ipGO.transform, ConnectionMed);
                 }
@@ -704,14 +728,26 @@ public class NodeSpawnerScript : MonoBehaviour
                 if (curvedEdgePrefab != null && curvedEdgePrefab.GetComponent<LineRenderer>() != null)
                 {
                     var edge = Instantiate(curvedEdgePrefab);
+
                     spawnedConnections.Add(edge);
                     var lr = edge.GetComponent<LineRenderer>();
+                    var tag = edge.AddComponent<EdgeTag>();
+                    tag.isMacIp = true;
+                    tag.mac_a = n.mac?.ToString();
+                    tag.ip = ip;
+                    tag.protocol = l7_proto.UNKNOWN;
+
                     ApplyEdgeMaterial(lr, ConnectionMed);
                     SetQuadraticCurve(lr, macGO.transform.position, ipGO.transform.position, 0.35f, 20);
                 }
                 else
                 {
                     var edge = Instantiate(connectionPrefab);
+                    var tag = edge.AddComponent<EdgeTag>();
+                    tag.isMacIp = true;
+                    tag.mac_a = n.mac?.ToString();
+                    tag.ip = ip;
+                    tag.protocol = l7_proto.UNKNOWN;
                     spawnedConnections.Add(edge);
                     ConnectStraight(edge.transform, macGO.transform, ipGO.transform, ConnectionMed);
                 }
@@ -762,6 +798,12 @@ public class NodeSpawnerScript : MonoBehaviour
             if (a == null || b == null) continue;
 
             GameObject edge = Instantiate(connectionPrefab);
+            var tag = edge.AddComponent<EdgeTag>();
+            tag.isMacMac = true;
+            tag.mac_a = sc.node_a_macs?.ToString();
+            tag.mac_b = sc.node_b_macs?.ToString();
+            tag.protocol = sc.protocol;
+
             spawnedConnections.Add(edge);
 
             ConnectStraight(edge.transform, a.transform, b.transform, null);

@@ -72,4 +72,13 @@ public class RayLayerToggle : MonoBehaviour
             _ => bothMask
         };
     }
+     void Update()
+    {
+        if (!ray) return;
+
+        if (ray.TryGetCurrent3DRaycastHit(out RaycastHit hit))
+        {
+            Debug.Log($"Ray hit: {hit.collider.name} (layer {LayerMask.LayerToName(hit.collider.gameObject.layer)})");
+        }
+    }
 }
