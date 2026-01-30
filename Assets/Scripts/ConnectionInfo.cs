@@ -1,12 +1,13 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using models;
 
 public class ConnectionInfo : MonoBehaviour
 {
-    public DBConnection.SubConnection data;
+    public SubConnection data;
 
-    public void Initialize(DBConnection.SubConnection node)
+    public void Initialize(SubConnection node)
     {
         data = node;
     }

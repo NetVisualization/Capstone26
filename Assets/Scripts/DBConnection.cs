@@ -22,77 +22,10 @@ using System.Reflection;
 using static UnityEditor.PlayerSettings;
 using Unity.Profiling;
 using System.Net.NetworkInformation;
+using models;
 
 public class DBConnection : MonoBehaviour
 {
-
-    // Database Node Object (Get)
-    [System.Serializable]
-    public struct Node
-    {
-        public System.Net.NetworkInformation.PhysicalAddress mac;
-        public UInt64 pkts;
-        public UInt64 bytes;
-        public DateTime first_seen;
-        public DateTime last_seen;
-        public int degree;
-        public List<IPAddress> ips;
-        public ushort[] src_ports;
-        public List<l7_proto> l7_protos;
-        public string device_type;
-    }
-
-    // Database Connection Object (Get)
-    [Serializable]
-    public struct Connection
-    {
-        public List<IPAddress> node_a;
-        public List<IPAddress> node_b;
-        public UInt64 pkts;
-        public UInt64 bytes;
-        public DateTime first_seen;
-        public DateTime last_seen;
-        public List<l4_proto> protos;
-        public PhysicalAddress node_a_macs;
-        public PhysicalAddress node_b_macs;
-        public ushort[] node_a_src_ports;
-        public ushort[] node_a_dst_ports;
-        public List<l7_proto> node_a_l7_protos;
-        public GameObject node1;
-        public GameObject node2;
-    }
-    // Sub-connection where everything is divided by protocol (Get)
-    public struct SubConnection
-    {
-        public List<IPAddress> node_a;
-        public List<IPAddress> node_b;
-        public PhysicalAddress node_a_macs;
-        public PhysicalAddress node_b_macs;
-        public l7_proto protocol;
-        public UInt64 pkts;
-        public UInt64 bytes;
-        public DateTime first_seen;
-        public GameObject node1;
-        public GameObject node2;
-    }
-
-    // Database Packet Object (Get)
-    [Serializable]
-    public struct Packet
-    {
-        public int _id;
-        public DateTime Timestamp;
-        public System.Net.NetworkInformation.PhysicalAddress SourceMAC;
-        public System.Net.NetworkInformation.PhysicalAddress DestinationMAC;
-        public IPAddress SourceIP;
-        public IPAddress DestinationIP;
-        public short SourcePort;
-        public short DestinationPort;
-        public string Protocol;
-        public int Length;
-        public byte[] PayloadHex;
-    }
-
     public string DB_NAME = "net";
     public string DB_HOST = "10.200.1.13";
     public string DB_PORT = "8123";
@@ -104,11 +37,6 @@ public class DBConnection : MonoBehaviour
     public GameObject nodeSpawner;
 
     DateTime date = new DateTime(2025, 09, 06, 16, 06, 01);
-
-    //public Node[] nodes;
-    //public Connection[] connections;
-
-    //public Packet[] packets;
 
     /// <summary>
     /// Connect to the database when the game engine is started

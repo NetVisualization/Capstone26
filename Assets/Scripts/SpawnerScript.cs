@@ -7,6 +7,7 @@ using System.Net.NetworkInformation;
 using System.Timers;
 using UnityEngine;
 using UnityEngine.UI;
+using models;
 
 public class NodeSpawnerScript : MonoBehaviour
 {
@@ -69,9 +70,9 @@ public class NodeSpawnerScript : MonoBehaviour
     public IReadOnlyDictionary<string, GameObject> MacNodes => NodeObjects; // for filtering nodes by MAC
 
 
-    List<DBConnection.Node> nodeList = new();
-    List<DBConnection.Connection> ConnectionList = new();
-    List<DBConnection.SubConnection> SubConnectionList = new();
+    List<Node> nodeList = new();
+    List<Connection> ConnectionList = new();
+    List<SubConnection> SubConnectionList = new();
 
     List<GameObject> spawnedMacNodes = new(); // MAC layer nodes
     public List<GameObject> spawnedConnections = new();
@@ -702,7 +703,7 @@ public class NodeSpawnerScript : MonoBehaviour
         }
 
         // 4) subdivide new connections into sub-connections
-        var newSubs = new List<DBConnection.SubConnection>();
+        var newSubs = new List<SubConnection>();
         foreach (var conn in newConns)
         {
             var parts = dbConnection.subdivideConnectionByProtocol(conn);
@@ -755,7 +756,7 @@ public class NodeSpawnerScript : MonoBehaviour
     }
 
     //spawn any new nodes that have been found
-    void SpawnMacNodeIfNeeded(DBConnection.Node node)
+    void SpawnMacNodeIfNeeded(Node node)
     {
         string macKey = node.mac?.ToString();
         if (!string.IsNullOrEmpty(macKey) && NodeObjects.ContainsKey(macKey))
@@ -783,7 +784,7 @@ public class NodeSpawnerScript : MonoBehaviour
     }
 
     // make any connections for the new nodes created
-    void MakeMacTrafficConnectionsFor(IEnumerable<DBConnection.SubConnection> subs)
+    void MakeMacTrafficConnectionsFor(IEnumerable<SubConnection> subs)
     {
         foreach (var sc in subs)
         {
@@ -814,7 +815,7 @@ public class NodeSpawnerScript : MonoBehaviour
 
 
     // makes evey mac unique
-    string ConnectionKey(DBConnection.SubConnection sc)
+    string ConnectionKey(SubConnection sc)
     {
         string pair = EdgeKey(sc.node_a_macs, sc.node_b_macs);
         // include protocol so each MAC pair+proto is unique

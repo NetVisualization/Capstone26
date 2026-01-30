@@ -1,12 +1,13 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using models;
 
 public class NodeInfo : MonoBehaviour
 {
-    public DBConnection.Node data;
+    public Node data;
 
-    public void Initialize(DBConnection.Node node)
+    public void Initialize(Node node)
     {
         data = node;
     }
