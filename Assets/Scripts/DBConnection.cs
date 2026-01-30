@@ -94,7 +94,7 @@ public class DBConnection : MonoBehaviour
     }
 
     public string DB_NAME = "net";
-    public string DB_HOST = "10.200.1.13";
+    public string DB_HOST = "localhost";
     public string DB_PORT = "8123";
     public string DB_USER = "capstone";
     public string DB_PASS = "boogle";

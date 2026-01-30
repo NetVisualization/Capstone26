@@ -18,7 +18,10 @@ public class RayLayerToggle : MonoBehaviour
     public LayerMask bothRaycastMask;
 
     [Header("Input")]
-    public InputActionReference toggleRayModeAction; // <-- drag your ToggleRayMode here
+    public InputActionReference toggleRayModeAction; // drag your ToggleRayMode here
+
+    [Header("HUD")]
+    public SelectionModeUI modeUI; // drag Toggle Switch HUD here
 
     public enum Mode { Both, NodesOnly, ConnectionsOnly }
     public Mode startMode = Mode.Both;
@@ -29,7 +32,7 @@ public class RayLayerToggle : MonoBehaviour
     {
         if (!ray) ray = GetComponentInChildren<XRRayInteractor>();
         mode = startMode;
-        ApplyMode();
+        ApplyMode(showFlash: false); // don’t flash on scene start
     }
 
     void OnEnable()
@@ -62,34 +65,37 @@ public class RayLayerToggle : MonoBehaviour
             _ => Mode.Both
         };
 
-        ApplyMode();
+        ApplyMode(showFlash: true);
         Debug.Log($"Ray Mode: {mode}");
     }
 
-private void ApplyMode()
-{
-    if (!ray) return;
-
-    switch (mode)
+    private void ApplyMode(bool showFlash)
     {
-        case Mode.NodesOnly:
-            ray.interactionLayers = nodesMask;
-            ray.raycastMask = nodesRaycastMask;
-            break;
+        if (!ray) return;
 
-        case Mode.ConnectionsOnly:
-            ray.interactionLayers = connectionsMask;
-            ray.raycastMask = connectionsRaycastMask;
-            break;
+        switch (mode)
+        {
+            case Mode.NodesOnly:
+                ray.interactionLayers = nodesMask;
+                ray.raycastMask = nodesRaycastMask;
+                modeUI?.SetMode(SelectionModeUI.SelectMode.Nodes, showFlash);
+                break;
 
-        default:
-            ray.interactionLayers = bothMask;
-            ray.raycastMask = bothRaycastMask;
-            break;
+            case Mode.ConnectionsOnly:
+                ray.interactionLayers = connectionsMask;
+                ray.raycastMask = connectionsRaycastMask;
+                modeUI?.SetMode(SelectionModeUI.SelectMode.Connections, showFlash);
+                break;
+
+            default:
+                ray.interactionLayers = bothMask;
+                ray.raycastMask = bothRaycastMask;
+                modeUI?.SetMode(SelectionModeUI.SelectMode.Both, showFlash);
+                break;
+        }
     }
-}
 
-     void Update()
+    void Update()
     {
         if (!ray) return;
 
