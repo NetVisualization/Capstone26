@@ -1,5 +1,6 @@
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -8,6 +9,7 @@ using System.Timers;
 using UnityEngine;
 using UnityEngine.UI;
 using models;
+using System.Threading.Tasks;
 
 public class NodeSpawnerScript : MonoBehaviour
 {
@@ -28,7 +30,7 @@ public class NodeSpawnerScript : MonoBehaviour
     // DB / External
     // ---------------------------------------------------------------------
     public GameObject dbInteractor;
-    [SerializeField] DBConnection dbConnection;
+    [SerializeField] VisIface dataManager;
     public FilterSystem filterSystem;
     public Toggle liveToggle;
 
@@ -93,36 +95,50 @@ public class NodeSpawnerScript : MonoBehaviour
     // For polling
     public float refreshInterval = 2f;  // seconds between DB polls
     private float refreshTimer = 0f;
-
+    private bool isPolling = false; // Prevent overlapping async calls
     private DateTime lastFetchTime;
 
 
     // ---------------------------------------------------------------------
     // Unity lifecycle
     // ---------------------------------------------------------------------
-    void Start()
+    async void Start()
     {
         // --- DB pulls ---
-        if (dbConnection == null)
+        if (dataManager == null)
         {
-            Debug.Log("dbConnection is Null");
+            Debug.Log("visIface dataManager is not initialized");
+            return;
         }
-        else
+
+        try
         {
-            DateTime initTime = new DateTime(1970, 01, 01, 00, 00, 00);     // ensure the initial frame renders all nodes
-            nodeList = dbConnection.getNodesAfter(initTime);
-            ConnectionList = dbConnection.getConnectionsAfter(initTime);
-
-            foreach (var conn in ConnectionList)
-            {
-                var parts = dbConnection.subdivideConnectionByProtocol(conn);
-                if (parts != null) SubConnectionList.AddRange(parts);
-            }
-            lastRender = DateTime.Now;
-
-            Debug.Log($"{ConnectionList.Count} connections");
-            Debug.Log($"{SubConnectionList.Count} sub-connections");
+            await dataManager.Initialize();
         }
+        catch (Exception ex)
+        {
+            Debug.LogError($"Failed to connect to DB: {ex.Message}");
+            return;
+        }
+
+        // ensure the initial frame renders all nodes
+        // use WhenAll method to fetch in parallel for performance
+        DateTime initTime = new DateTime(1970, 01, 01, 00, 00, 00);
+        var nodesTask =  dataManager.GetNodesAfterAsync(initTime);
+        var connsTask = dataManager.GetConnectionsAfterAsync(initTime);
+        await Task.WhenAll(nodesTask, connsTask);
+        nodeList = nodesTask.Result;
+        ConnectionList = connsTask.Result;
+
+        foreach (var conn in ConnectionList)
+        {
+            var parts = NetworkUtils.subdivideConnectionByProtocol(conn);
+            if (parts != null) SubConnectionList.AddRange(parts);
+        }
+        lastRender = DateTime.Now;
+
+        Debug.Log($"{ConnectionList.Count} connections");
+        Debug.Log($"{SubConnectionList.Count} sub-connections");
 
         // 0) Build shared subnet order from ALL IPs we see (for alignment)
         subnetOrder = ComputeSubnetOrder();
@@ -167,7 +183,6 @@ public class NodeSpawnerScript : MonoBehaviour
             PollForNewTraffic();
         }
     }
-
 
     // ---------------------------------------------------------------------
     //  MAC layer
@@ -676,82 +691,102 @@ public class NodeSpawnerScript : MonoBehaviour
     // ---------------------------------------------------------------------
     //  live traffic functions
     // ---------------------------------------------------------------------
-    
-    //checks for any updates in the database
-    void PollForNewTraffic()
+
+    //checks for any updates in the database asyncronously to prevent freezing
+    async void PollForNewTraffic()
     {
-        if (dbConnection == null) return;
+        // If manager is missing or we are currently waiting for a previous poll, skip
+        if (dataManager == null || isPolling) return;
 
-        // 1) ask DB for anything newer than lastFetchTime
-        var newNodes = dbConnection.getNodesAfter(lastFetchTime);
-        var newConns = dbConnection.getConnectionsAfter(lastFetchTime);
+        isPolling = true;
 
-        // 2) bump lastFetchTime to the newest first_seen we saw
-        DateTime maxTs = lastFetchTime;
-        foreach (var n in newNodes)
-            if (n.first_seen > maxTs) maxTs = n.first_seen;
-        foreach (var c in newConns)
-            if (c.first_seen > maxTs) maxTs = c.first_seen;
-        if (maxTs > lastFetchTime)
-            lastFetchTime = maxTs;
-
-        // 3) spawn any *new* MAC nodes
-        foreach (var n in newNodes)
+        try
         {
-            nodeList.Add(n);              // keep global list in sync
-            SpawnMacNodeIfNeeded(n);
-        }
+            // 1) Ask DB for anything newer than lastFetchTime (Async)
+            var newNodes = await dataManager.GetNodesAfterAsync(lastFetchTime);
+            var newConns = await dataManager.GetConnectionsAfterAsync(lastFetchTime);
 
-        // 4) subdivide new connections into sub-connections
-        var newSubs = new List<SubConnection>();
-        foreach (var conn in newConns)
-        {
-            var parts = dbConnection.subdivideConnectionByProtocol(conn);
-            if (parts != null) newSubs.AddRange(parts);
-        }
-        SubConnectionList.AddRange(newSubs);
+            // 2) Update timestamps
+            DateTime maxTs = lastFetchTime;
+            foreach (var n in newNodes)
+                if (n.first_seen > maxTs) maxTs = n.first_seen;
+            foreach (var c in newConns)
+                if (c.first_seen > maxTs) maxTs = c.first_seen;
 
-        // 5) draw edges only for the new sub-connections
-        MakeMacTrafficConnectionsFor(newSubs);
+            if (maxTs > lastFetchTime)
+                lastFetchTime = maxTs;
 
-        // 6) OPTIONAL: update IP layer & MAC<->IP mapping for new nodes
-        //    (simple version: just hook their IPs into the existing IP hubs)
-        foreach (var n in newNodes)
-        {
-            GameObject macGO = FindNodeByMac(n.mac);
-            if (macGO == null || n.ips == null) continue;
-
-            foreach (var ip in n.ips)
+            // 3) Spawn new Nodes
+            foreach (var n in newNodes)
             {
-                var ipGO = CreateOrGetIpNode(ip);
+                nodeList.Add(n);
+                SpawnMacNodeIfNeeded(n);
+            }
 
-                if (curvedEdgePrefab != null && curvedEdgePrefab.GetComponent<LineRenderer>() != null)
+            // 4) Process new Connections
+            var newSubs = new List<SubConnection>();
+            foreach (var conn in newConns)
+            {
+                // UPDATED: Use static helper
+                var parts = NetworkUtils.subdivideConnectionByProtocol(conn);
+                if (parts != null) newSubs.AddRange(parts);
+            }
+            SubConnectionList.AddRange(newSubs);
+
+            // 5) Draw visual edges
+            MakeMacTrafficConnectionsFor(newSubs);
+
+            // 6) Update IP mappings
+            foreach (var n in newNodes)
+            {
+                GameObject macGO = FindNodeByMac(n.mac);
+                if (macGO == null || n.ips == null) continue;
+
+                foreach (var ip in n.ips)
                 {
-                    var edge = Instantiate(curvedEdgePrefab);
-
-                    spawnedConnections.Add(edge);
-                    var lr = edge.GetComponent<LineRenderer>();
-                    var tag = edge.AddComponent<EdgeTag>();
-                    tag.isMacIp = true;
-                    tag.mac_a = n.mac?.ToString();
-                    tag.ip = ip;
-                    tag.protocol = l7_proto.UNKNOWN;
-
-                    ApplyEdgeMaterial(lr, ConnectionMed);
-                    SetQuadraticCurve(lr, macGO.transform.position, ipGO.transform.position, 0.35f, 20);
-                }
-                else
-                {
-                    var edge = Instantiate(connectionPrefab);
-                    var tag = edge.AddComponent<EdgeTag>();
-                    tag.isMacIp = true;
-                    tag.mac_a = n.mac?.ToString();
-                    tag.ip = ip;
-                    tag.protocol = l7_proto.UNKNOWN;
-                    spawnedConnections.Add(edge);
-                    ConnectStraight(edge.transform, macGO.transform, ipGO.transform, ConnectionMed);
+                    var ipGO = CreateOrGetIpNode(ip);
+                    CreateMacIpEdge(macGO, ipGO, n.mac, ip);
                 }
             }
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError($"Error polling traffic: {ex.Message}");
+        }
+        finally
+        {
+            isPolling = false;
+        }
+    }
+
+    void CreateMacIpEdge(GameObject macGO, GameObject ipGO, PhysicalAddress mac, IPAddress ip)
+    {
+        if (curvedEdgePrefab != null && curvedEdgePrefab.GetComponent<LineRenderer>() != null)
+        {
+            var edge = Instantiate(curvedEdgePrefab);
+            spawnedConnections.Add(edge);
+
+            var tag = edge.AddComponent<EdgeTag>();
+            tag.isMacIp = true;
+            tag.mac_a = mac?.ToString();
+            tag.ip = ip;
+            tag.protocol = l7_proto.UNKNOWN;
+
+            var lr = edge.GetComponent<LineRenderer>();
+            ApplyEdgeMaterial(lr, ConnectionMed);
+            SetQuadraticCurve(lr, macGO.transform.position, ipGO.transform.position, 0.35f, 20);
+        }
+        else
+        {
+            var edge = Instantiate(connectionPrefab);
+            var tag = edge.AddComponent<EdgeTag>();
+            tag.isMacIp = true;
+            tag.mac_a = mac?.ToString();
+            tag.ip = ip;
+            tag.protocol = l7_proto.UNKNOWN;
+
+            spawnedConnections.Add(edge);
+            ConnectStraight(edge.transform, macGO.transform, ipGO.transform, ConnectionMed);
         }
     }
 
