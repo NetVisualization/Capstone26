@@ -30,8 +30,8 @@ public static class NetworkUtils
                 subConn.node_b_macs = conn.node_b_macs;
                 subConn.protocol = proto;
                 // set other fields to zero/empty
-                subConn.pkts = 0;
-                subConn.bytes = 0;
+                subConn.pkts = conn.pkts;
+                subConn.bytes = conn.bytes;
                 subConn.first_seen = new DateTime(1970, 01, 01);
 
                 subConns.Add(subConn);

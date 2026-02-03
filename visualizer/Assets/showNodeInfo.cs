@@ -16,6 +16,18 @@ public class showNodeInfo : MonoBehaviour
     {
         if (!pannel) pannel = FindObjectOfType<InfoPannelController>(true);
         interactable = GetComponent<XRBaseInteractable>();
+
+        // find the sibling component on this connection object
+        if (ConnectionData == null)
+        {
+            ConnectionData = GetComponent<ConnectionInfo>();
+        }
+
+        if (ConnectionData == null && NodeData == null)
+        {
+            Debug.LogError("showNodeInfo is missing a data source!");
+        }
+
         if (pannel)
         {
             Debug.Log("Found panel");
@@ -40,12 +52,11 @@ public class showNodeInfo : MonoBehaviour
         Debug.Log("selected something");
         if (pannel && NodeData)
         {
-            Debug.Log("type node");
             pannel.setText(NodeData);
         }
         else if (pannel && ConnectionData)
         {
-            Debug.Log("type conn");
+            Debug.Log($"trying to display {ConnectionData}");
             pannel.setText(ConnectionData);
         }
         else

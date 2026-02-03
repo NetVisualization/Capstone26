@@ -306,6 +306,11 @@ public class NodeSpawnerScript : MonoBehaviour
                 if (a == null || b == null) continue;
 
                 GameObject edge = Instantiate(connectionPrefab);
+                var connInfo = edge.GetComponent<ConnectionInfo>();
+                if (connInfo != null)
+                {
+                    connInfo.Initialize(sc);
+                }
 
                 var tag = edge.AddComponent<EdgeTag>();
                 tag.isMacMac = true;
@@ -833,6 +838,12 @@ public class NodeSpawnerScript : MonoBehaviour
             if (a == null || b == null) continue;
 
             GameObject edge = Instantiate(connectionPrefab);
+            var connInfo = edge.GetComponent<ConnectionInfo>();
+            if (connInfo != null)
+            {
+                connInfo.Initialize(sc);
+            }
+
             var tag = edge.AddComponent<EdgeTag>();
             tag.isMacMac = true;
             tag.mac_a = sc.node_a_macs?.ToString();
