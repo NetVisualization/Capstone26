@@ -6,7 +6,7 @@ The default configuration allows you to quickly deploy the entire backend to a s
 2. Optionally, install docker desktop: https://docs.docker.com/desktop/ (scroll down to install Docker Desktop and select either Mac, Windows, or Linux)
 3. Start the containers using docker compose from your system shell:
 ``` sh
-cd parser/NetVis/docker		# from the repository root directory
+cd parser/docker		# from the repository root directory
 docker compose up -d
 ```
 4. Verify the containers started correctly: 
@@ -21,7 +21,7 @@ You may wish to deploy one or both services on separate hosts. The connection be
 2. Install the docker engine, and optionally, docker desktop (step 1-2 above)
 3. Use one of the below commands to start the containers, based on your preferred deployment:
 ``` sh
-cd parser/NetVis/docker				# from the repository root directory
+cd parser/docker				# from the repository root directory
 
 docker compose up -d				# starts both database and live capture utility
 docker compose up -d clickhouse		# starts the database only

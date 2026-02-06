@@ -40,6 +40,7 @@ services:
     depends_on:
       clickhouse:
         condition: service_healthy
+    network_mode: "host"
     cap_add:
       - NET_ADMIN
       - NET_RAW
@@ -47,7 +48,7 @@ services:
       - ../:/netvis # mounts your entire project
     networks:
       - netvis
-    command: [bash, /netvis/pcap2ch/netvis-entry.sh]
+    command: [bash, /netvis/docker/netvis-entry.sh]
 
 networks:
   netvis:
