@@ -163,3 +163,6 @@ target
 Thumbs.db
 ehthumbs.db
 Desktop.ini
+
+# zeek logs (push directory but not contents)
+/parser/zeek-logs/*

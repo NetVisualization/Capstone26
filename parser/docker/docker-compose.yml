@@ -50,6 +50,20 @@ services:
       - netvis
     command: [bash, /netvis/docker/netvis-entry.sh]
 
+  zeek:
+    image: zeek/zeek:latest
+    container_name: zeek
+    restart: unless-stopped
+    network_mode: "host"
+    working_dir: /usr/local/zeek/logs
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    volumes:
+      - ../zeek-logs:/usr/local/zeek/logs
+      - ../zeek-config/local.zeek:/usr/local/zeek/share/zeek/site/local.zeek
+    command: zeek -C -i ens160 local
+
 networks:
   netvis:
     driver: bridge
@@ -57,3 +71,4 @@ networks:
 volumes:
   clickhouse-data:
   clickhouse-logs:
+
