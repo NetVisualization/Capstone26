@@ -31,24 +31,6 @@ services:
     networks:
       - netvis
 
-  netvis:
-    image: ubuntu:22.04
-    container_name: netvis-dev
-    working_dir: /netvis
-    stdin_open: true
-    tty: true
-    depends_on:
-      clickhouse:
-        condition: service_healthy
-    cap_add:
-      - NET_ADMIN
-      - NET_RAW
-    volumes:
-      - ../:/netvis # mounts your entire project
-    networks:
-      - netvis
-    command: [bash, /netvis/pcap2ch/netvis-entry.sh]
-
 networks:
   netvis:
     driver: bridge
