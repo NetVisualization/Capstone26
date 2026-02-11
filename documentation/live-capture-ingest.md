@@ -6,7 +6,7 @@ The current iteration of the parser can only view traffic that is directed throu
 ## Compiling from source - first time only
 1. Clone the repo, or at least place the `parser/` directory on the host that will run the live traffic scanner.  
 2. From the root of the repo, acccess, the live ingest and parser tool in the following directory: `cd parser/NetVis/pcap2ch`  
-3. If you have not already, install rust with the instructions at: `https://rust-lang.org/tools/install/`
+3. Install Rust with the following command: `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh`
 4. Install the C++ build essentials tools:
 	- Windows: https://visualstudio.microsoft.com/vs/features/cplusplus/
 	- Linux: `sudo apt install build-essentials`

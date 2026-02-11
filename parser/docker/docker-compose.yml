@@ -43,7 +43,8 @@ services:
     volumes:
       - ../zeek-logs:/usr/local/zeek/logs
       - ../zeek-config/local.zeek:/usr/local/zeek/share/zeek/site/local.zeek
-    command: zeek -C -i ens160 local
+    # Change interface for user specific machine
+    command: zeek -C -i en0 local
 
 networks:
   netvis:
