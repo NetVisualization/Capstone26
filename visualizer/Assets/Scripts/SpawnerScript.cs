@@ -532,20 +532,20 @@ public class NodeSpawnerScript : MonoBehaviour
         // Distinct, readable palette. Tweak as you like.
         switch (proto)
         {
-            case l7_proto.SSH: return new Color(0.84f, 0.16f, 0.23f); // #D7293B
-            case l7_proto.SMTP: return new Color(0.98f, 0.62f, 0.01f); // #FA9E03
-            case l7_proto.DNS: return new Color(0.18f, 0.60f, 0.96f); // #2E99F5
-            case l7_proto.DHCP: return new Color(0.41f, 0.23f, 0.88f); // #693BE0
-            case l7_proto.HTTP: return new Color(0.95f, 0.38f, 0.09f); // #F26117
-            case l7_proto.POP3: return new Color(0.11f, 0.74f, 0.73f); // #1DBDBA
-            case l7_proto.NTP: return new Color(0.16f, 0.80f, 0.26f); // #29CC43
-            case l7_proto.IMAP: return new Color(0.60f, 0.47f, 0.16f); // #99782A
-            case l7_proto.TLS: return new Color(0.13f, 0.59f, 0.95f); // #218FEF (HTTPS-ish)
-            case l7_proto.SMB: return new Color(0.62f, 0.35f, 0.71f); // #9E59B5
-            case l7_proto.QUIC: return new Color(0.96f, 0.23f, 0.33f); // #F63B55
-            case l7_proto.SSDP: return new Color(0.50f, 0.83f, 0.13f); // #80D321
-            case l7_proto.RDP: return new Color(0.95f, 0.18f, 0.54f); // #F22E8A
-            case l7_proto.MDNS: return new Color(0.00f, 0.67f, 0.52f); // #00AA85
+            case l7_proto.SSH: return new Color(0.84f, 0.16f, 0.23f); // rgb(215, 41, 59)
+            case l7_proto.SMTP: return new Color(0.98f, 0.62f, 0.01f); // rgb(250, 158, 3)
+            case l7_proto.DNS: return new Color(0.18f, 0.60f, 0.96f); // rgb(46, 153, 245)
+            case l7_proto.DHCP: return new Color(0.41f, 0.23f, 0.88f); // rgb(105, 59, 224)
+            case l7_proto.HTTP: return new Color(0.95f, 0.38f, 0.09f); // rgb(242, 97, 23)
+            case l7_proto.POP3: return new Color(0.11f, 0.74f, 0.73f); // rgb(29, 189, 186)
+            case l7_proto.NTP: return new Color(0.16f, 0.80f, 0.26f); // rgb(41, 204, 67)
+            case l7_proto.IMAP: return new Color(0.60f, 0.47f, 0.16f); // rgb(153, 120, 42)
+            case l7_proto.TLS: return new Color(0.13f, 0.59f, 0.95f); // rgb(33, 143, 239) (HTTPS-ish)
+            case l7_proto.SMB: return new Color(0.62f, 0.35f, 0.71f); // rgb(158, 89, 181)
+            case l7_proto.QUIC: return new Color(0.96f, 0.23f, 0.33f); // rgb(246, 59, 85)
+            case l7_proto.SSDP: return new Color(0.50f, 0.83f, 0.13f); // rgb(128, 211, 33)
+            case l7_proto.RDP: return new Color(0.95f, 0.18f, 0.54f); // rgb(242, 46, 138)
+            case l7_proto.MDNS: return new Color(0.00f, 0.67f, 0.52f); // rgb(0, 170, 133)
             case l7_proto.UNKNOWN:
             default: return Color.gray;
         }
