@@ -41,8 +41,8 @@ services:
       - NET_ADMIN
       - NET_RAW
     volumes:
-      - ../zeek-logs:/usr/local/zeek/logs
-      - ../zeek-config/local.zeek:/usr/local/zeek/share/zeek/site/local.zeek
+      - ../zeek/zeek-logs:/usr/local/zeek/logs
+      - ../zeek/zeek-config/local.zeek:/usr/local/zeek/share/zeek/site/local.zeek
     # Change interface for user specific machine
     command: zeek -C -i en0 local
 
