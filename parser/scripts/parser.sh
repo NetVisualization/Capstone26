@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # --- Config ---
-BIN_PATH="../pcap2ch/target/release/pcap2ch"
+BIN_PATH="../bin/pcap2ch/target/release/pcap2ch"
 SCANS_DIR="../scans/"
 DOCKER_DIR="../docker/"
 RUST_LOG_LEVEL="info"

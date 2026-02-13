@@ -1,5 +1,5 @@
 # --- Config ---
-$BIN_PATH = "../pcap2ch/target/release/pcap2ch.exe"
+$BIN_PATH = "../bin/pcap2ch/target/release/pcap2ch.exe"
 $SCANS_DIR = "../scans/"
 $DOCKER_DIR = "../docker/"
 $env:RUST_LOG = "info"
