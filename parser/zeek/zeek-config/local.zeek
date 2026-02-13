@@ -1,73 +1,112 @@
-##! Modern Local Site Policy for Zeek
-##! ---------------------------------
+##! Local site policy. Customize as appropriate.
+##!
+##! This file will not be overwritten when upgrading or reinstalling!
 
-# 1. DEFINE YOUR NETWORK (CRITICAL)
-# Replace these subnets with the actual IP range of your Docker network or Host LAN.
-# Without this, Zeek cannot determine "Inbound" vs "Outbound".
-redef Site::local_nets += { 
-    172.16.0.0/12,    # Example: Docker Networks
-    10.200.1.0/24        # Example: Private LAN
-};
+# load packages
+@load packages
 
-# 2. LOAD THE NOTICE FRAMEWORK
-@load policy/frameworks/notice
+# This script logs which scripts were loaded during each run.
+@load misc/loaded-scripts
 
-# 4. ENABLE TRACEROUTE DETECTION
-@load policy/misc/detect-traceroute
+# Estimate and log capture loss.
+@load misc/capture-loss
 
-# 5. SECURITY & ANOMALIES (Modern Paths)
-# Detect cleartext passwords/auth
-@load policy/protocols/ftp/detect
+# Enable logging of memory, packet and lag statistics.
+@load misc/stats
 
-# Asset Tracking (Logs known hosts/services)
-@load policy/protocols/conn/known-hosts
-@load policy/protocols/conn/known-services
-@load policy/protocols/ssl/validate-certs
+# For TCP scan detection, we recommend installing the package from
+# 'https://github.com/ncsa/bro-simple-scan'. E.g., by installing it via
+#
+#     zkg install ncsa/bro-simple-scan
 
-# 6. SOFTWARE TRACKING
-@load policy/frameworks/software/vulnerable
-@load policy/frameworks/software/version-changes
+# Detect traceroute being run on the network. This could possibly cause
+# performance trouble when there are a lot of traceroutes on your network.
+# Enable cautiously.
+#@load misc/detect-traceroute
 
-# 7. EXTENDED LOGGING
-# Log hash of all files transferred (great for forensics)
-@load policy/frameworks/files/hash-all-files
+# Generate notices when vulnerable versions of software are discovered.
+# The default is to only monitor software found in the address space defined
+# as "local".  Refer to the software framework's documentation for more
+# information.
+@load frameworks/software/vulnerable
 
-##! ----------------------------------------------------------------------
-##! CUSTOM SCAN DETECTION
-##! ----------------------------------------------------------------------
+# Detect software changing (e.g. attacker installing hacked SSHD).
+@load frameworks/software/version-changes
 
-# 1. Define the Notice Type
-redef enum Notice::Type += {
-    Port_Scan,
-    Address_Scan
-};
+# This adds signatures to detect cleartext forward and reverse windows shells.
+@load-sigs frameworks/signatures/detect-windows-shells
 
-# 2. Configure Thresholds (Low for testing)
-const scan_threshold_count = 5;       # How many distinct ports/hosts?
-const scan_interval = 5mins;          # In what time window?
+# Load all of the scripts that detect software in various protocols.
+@load protocols/ftp/software
+@load protocols/smtp/software
+@load protocols/ssh/software
+@load protocols/http/software
+# The detect-webapps script could possibly cause performance trouble when
+# running on live traffic.  Enable it cautiously.
+#@load protocols/http/detect-webapps
 
-# 3. Define the Tracker (Who is scanning whom?)
-global scanner_tracking: table[addr] of set[port] &create_expire=scan_interval;
+# This script detects DNS results pointing toward your Site::local_nets
+# where the name is not part of your local DNS zone and is being hosted
+# externally.  Requires that the Site::local_zones variable is defined.
+@load protocols/dns/detect-external-names
 
-# 4. The Logic
-event connection_attempt(c: connection)
-    {
-    local src = c$id$orig_h;
-    local dst_port = c$id$resp_p;
+# Script to detect various activity in FTP sessions.
+@load protocols/ftp/detect
 
-    # Initialize if new
-    if ( src !in scanner_tracking )
-        scanner_tracking[src] = set();
+# Scripts that do asset tracking.
+@load protocols/conn/known-hosts
+@load protocols/conn/known-services
+@load protocols/ssl/known-certs
 
-    # Add the port to the set
-    add scanner_tracking[src][dst_port];
+# This script enables SSL/TLS certificate validation.
+@load protocols/ssl/validate-certs
 
-    # Check Threshold
-    if ( |scanner_tracking[src]| == scan_threshold_count )
-        {
-        NOTICE([$note=Port_Scan,
-                $msg=fmt("Host %s has scanned %d unique ports", src, |scanner_tracking[src]|),
-                $src=src,
-                $identifier=cat(src)]);
-        }
-    }
+# This script prevents the logging of SSL CA certificates in x509.log
+@load protocols/ssl/log-hostcerts-only
+
+# If you have GeoIP support built in, do some geographic detections and
+# logging for SSH traffic.
+@load protocols/ssh/geo-data
+# Detect hosts doing SSH bruteforce attacks.
+@load protocols/ssh/detect-bruteforcing
+# Detect logins using "interesting" hostnames.
+@load protocols/ssh/interesting-hostnames
+
+# Detect SQL injection attacks.
+@load protocols/http/detect-sql-injection
+
+#### Network File Handling ####
+
+# Enable MD5 and SHA1 hashing for all files.
+@load frameworks/files/hash-all-files
+
+# Detect SHA1 sums in Team Cymru's Malware Hash Registry.
+@load frameworks/files/detect-MHR
+
+# Extend email alerting to include hostnames
+@load policy/frameworks/notice/extend-email/hostnames
+
+# Extend the notice.log with Community ID hashes
+# @load policy/frameworks/notice/community-id
+
+# Enable logging of telemetry data into telemetry.log and
+# telemetry_histogram.log.
+@load frameworks/telemetry/log
+
+# Uncomment the following line to enable detection of the heartbleed attack. Enabling
+# this might impact performance a bit.
+# @load policy/protocols/ssl/heartbleed
+
+# Uncomment the following line to enable logging of Community ID hashes in
+# the conn.log file.
+# @load policy/protocols/conn/community-id-logging
+
+# Uncomment the following line to enable logging of connection VLANs. Enabling
+# this adds two VLAN fields to the conn.log file.
+# @load policy/protocols/conn/vlan-logging
+
+# Uncomment the following line to enable logging of link-layer addresses. Enabling
+# this adds the link-layer address for each connection endpoint to the conn.log file.
+# @load policy/protocols/conn/mac-logging
+
+# Uncomment this to source zkg's package state
