@@ -238,7 +238,6 @@ FROM net.nodes;
 
 
 -- raw_bytes.sql
-CREATE DATABASE IF NOT EXISTS net;
 
 DROP TABLE IF EXISTS net.raw_bytes;
 
