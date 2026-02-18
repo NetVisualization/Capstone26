@@ -71,6 +71,21 @@ public class NodeSpawnerScript : MonoBehaviour
     public IReadOnlyList<GameObject> Connections => spawnedConnections; // for use in other files
     public IReadOnlyDictionary<string, GameObject> MacNodes => NodeObjects; // for filtering nodes by MAC
 
+    // ---- Public node access for filtering ----
+public IReadOnlyList<GameObject> MacNodeList => spawnedMacNodes;
+public IEnumerable<GameObject> IpNodeList => IpNodes.Values;
+
+// easy "everything" view (MAC + IP nodes)
+public IEnumerable<GameObject> AllNodes => spawnedMacNodes.Concat(IpNodes.Values);
+
+// ---- Adjacency: which edges touch each node key ----
+private readonly Dictionary<string, List<GameObject>> edgesByMac = new();
+private readonly Dictionary<IPAddress, List<GameObject>> edgesByIp = new();
+
+public IReadOnlyDictionary<string, List<GameObject>> EdgesByMac => edgesByMac;
+public IReadOnlyDictionary<IPAddress, List<GameObject>> EdgesByIp => edgesByIp;
+
+
 
     List<Node> nodeList = new();
     List<Connection> ConnectionList = new();
@@ -319,6 +334,8 @@ public class NodeSpawnerScript : MonoBehaviour
                 tag.protocol = sc.protocol;
 
                 spawnedConnections.Add(edge);
+                RegisterEdge(edge, tag);
+
 
                 // keep your parallel offset behavior
                 ConnectStraight(edge.transform, a.transform, b.transform, null, i, count);
@@ -419,6 +436,8 @@ public class NodeSpawnerScript : MonoBehaviour
                     tag.protocol = l7_proto.UNKNOWN;
                     
                     spawnedConnections.Add(edge);
+                    RegisterEdge(edge, tag);
+
                     var lr = edge.GetComponent<LineRenderer>();
                     ApplyEdgeMaterial(lr, ConnectionMed);
                     SetQuadraticCurve(lr, macGO.transform.position, ipGO.transform.position, bulge: 0.35f, segments: 20);
@@ -666,6 +685,48 @@ public class NodeSpawnerScript : MonoBehaviour
             }
         }
     }
+
+    private void RegisterEdge(GameObject edge, EdgeTag tag)
+{
+    if (edge == null || tag == null) return;
+
+    // MAC-MAC edge
+    if (tag.isMacMac)
+    {
+        if (!string.IsNullOrEmpty(tag.mac_a))
+        {
+            if (!edgesByMac.TryGetValue(tag.mac_a, out var listA))
+                edgesByMac[tag.mac_a] = listA = new List<GameObject>();
+            listA.Add(edge);
+        }
+
+        if (!string.IsNullOrEmpty(tag.mac_b))
+        {
+            if (!edgesByMac.TryGetValue(tag.mac_b, out var listB))
+                edgesByMac[tag.mac_b] = listB = new List<GameObject>();
+            listB.Add(edge);
+        }
+    }
+
+    // MAC-IP edge
+    if (tag.isMacIp)
+    {
+        if (!string.IsNullOrEmpty(tag.mac_a))
+        {
+            if (!edgesByMac.TryGetValue(tag.mac_a, out var listA))
+                edgesByMac[tag.mac_a] = listA = new List<GameObject>();
+            listA.Add(edge);
+        }
+
+        if (tag.ip != null)
+        {
+            if (!edgesByIp.TryGetValue(tag.ip, out var listI))
+                edgesByIp[tag.ip] = listI = new List<GameObject>();
+            listI.Add(edge);
+        }
+    }
+}
+
 
     // ---------------------------------------------------------------------
     //  Utilities
