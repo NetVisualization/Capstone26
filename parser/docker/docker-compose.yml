@@ -32,19 +32,23 @@ services:
       - netvis
 
   zeek:
-    image: zeek/zeek:latest
+    #image: zeek/zeek:latest
+    build: . # build from the local dockerfile which installs some packages on top of the base zeek image
     container_name: zeek
     restart: unless-stopped
+    environment:
+      - ZEEK_DIGEST_SALT=${ZEEK_DIGEST_SALT}
     network_mode: "host"
     working_dir: /usr/local/zeek/logs
     cap_add:
       - NET_ADMIN
       - NET_RAW
     volumes:
-      - ../zeek/zeek-logs:/usr/local/zeek/logs
-      - ../zeek/zeek-config/local.zeek:/usr/local/zeek/share/zeek/site/local.zeek
+      - ../zeek/logs:/usr/local/zeek/logs
+      - ../zeek/scripts:/usr/local/zeek/share/zeek/site/scripts
+      - ../zeek/config/local.zeek:/usr/local/zeek/share/zeek/site/local.zeek
     # Change interface for user specific machine
-    command: zeek -C -i en0 local
+    command: zeek -C -i ens160 local
 
 networks:
   netvis:

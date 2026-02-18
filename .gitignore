@@ -166,3 +166,4 @@ Desktop.ini
 
 # zeek logs (push directory but not contents)
 /parser/zeek-logs/*
+/parser/docker/.env
