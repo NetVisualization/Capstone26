@@ -62,7 +62,7 @@ if [[ "$MODE" == "1" ]]; then
         exit 1
     fi
     echo "➡️  Launching NetVis stack..."
-    (cd "$DOCKER_DIR" && docker-compose up -d)
+    (cd "$DOCKER_DIR" && docker compose up -d)
     echo "✅ Containers are starting. Database schema will be initialized automatically."
     exit 0
 fi
