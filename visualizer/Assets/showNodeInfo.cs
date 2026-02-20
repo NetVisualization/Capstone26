@@ -28,14 +28,14 @@ public class showNodeInfo : MonoBehaviour
             Debug.LogError("showNodeInfo is missing a data source!");
         }
 
-        if (pannel)
-        {
-            Debug.Log("Found panel");
-        }
-        else
-        {
-            Debug.Log("Pannel not found");
-        }
+        //if (pannel)
+        //{
+        //    Debug.Log("Found panel");
+        //}
+        //else
+        //{
+        //    Debug.Log("Pannel not found");
+        //}
     }
     private void OnEnable()
     {

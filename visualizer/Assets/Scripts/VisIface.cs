@@ -101,6 +101,10 @@ public class VisIface : MonoBehaviour
             node.l7_protos = NetworkUtils.intArrayToAppLayerList(l7s); // Use Helper
             node.device_type = reader.GetString(reader.GetOrdinal("device_type"));
 
+            // these fields are from the zeek db and always initialize to false until alert triggered
+            node.isWarning = false;
+            node.isAlert = false;
+
             nodes.Add(node);
         }
         return nodes;
@@ -162,5 +166,54 @@ public class VisIface : MonoBehaviour
         }
         return conns;
     }
+
+    /// <summary>
+    /// Query the weird table and flag nodes that have warnings
+    /// </summary>
+    public async Task<List<Node>> FlagWeirdNodes(DateTime time, List<Node> loadedNodes)
+    {
+        // time based approach doesn't work for init
+        // string sql = "SELECT resp_h FROM net.weird WHERE weird.ts > toDateTime(@time)";
+        string sql = "SELECT resp_h FROM net.weird";
+
+        // var parameters = new Dictionary<string, object> { { "time", time } };
+
+        using var reader = await _connection.ExecuteReader(sql); // , parameters);
+        List<IPAddress> ips = new List<IPAddress>();
+        while (reader.Read())
+        {
+            var rawData = reader["resp_h"];
+            if (rawData is IPAddress[] ipArray)
+            {
+                ips.AddRange(ipArray);
+            }
+            else if (rawData is IPAddress singleIp)
+            {
+                ips.Add(singleIp);
+            }
+        }
+        
+        // update nodes whose IP addresses match warnings above.
+        foreach (IPAddress ip in ips)
+        {
+            var index = loadedNodes.FindIndex(Node => Node.ips.Contains(ip));
+            if (index  != -1)
+            {
+                var temp = loadedNodes[index];
+                temp.isWarning = true;
+                loadedNodes[index] = temp;
+            }
+        }
+
+        return loadedNodes;
+    }
+
+    /// <summary>
+    /// Query the weird table and flag nodes that have warnings
+    /// </summary>
+    //public async Task<List<Connection>> FlagAlertNodes(DateTime time)
+    //{
+
+    //}
 
 }

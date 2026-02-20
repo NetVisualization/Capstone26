@@ -18,5 +18,7 @@ namespace models
         public ushort[] src_ports;
         public List<l7_proto> l7_protos;
         public string device_type;
+        public bool isWarning;
+        public bool isAlert;
     }
 }

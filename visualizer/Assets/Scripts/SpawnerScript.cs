@@ -772,6 +772,16 @@ public IReadOnlyDictionary<IPAddress, List<GameObject>> EdgesByIp => edgesByIp;
             var newNodes = await dataManager.GetNodesAfterAsync(lastFetchTime);
             var newConns = await dataManager.GetConnectionsAfterAsync(lastFetchTime);
 
+            // check for any new zeek alerts
+            newNodes = await dataManager.FlagWeirdNodes(lastFetchTime, newNodes);
+            
+            var warningIps = newNodes.Where(node => node.isWarning).SelectMany(node => node.ips);
+            foreach (var ip in warningIps)
+            {
+                Debug.Log($"weird node to color yellow: {ip.ToString()}");
+            }
+
+
             // 2) Update timestamps
             DateTime maxTs = lastFetchTime;
             foreach (var n in newNodes)
