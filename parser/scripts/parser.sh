@@ -7,6 +7,11 @@ SCANS_DIR="../scans/"
 DOCKER_DIR="../docker/"
 RUST_LOG_LEVEL="info"
 
+# Zeek/Weird import config
+ZEEK2CH_DIR="../bin/zeek2ch"
+WEIRD_PY="$ZEEK2CH_DIR/weird.py"
+ZEEK_WEIRD_LOG="../zeek/zeek-logs/weird.log"
+
 # --- Helpers ---
 ask() {
   local prompt var default
@@ -40,6 +45,38 @@ require_binary() {
     echo "❌ Error: binary not found at $BIN_PATH. Build the project first."
     exit 1
   fi
+}
+
+run_weird_import() {
+  # Runs ../bin/zeek2ch/weird.py via its venv (if present) to import ../zeek/zeek-logs/weird.log
+  if [[ ! -f "$WEIRD_PY" ]]; then
+    echo "⚠️  Skipping weird.log import: script not found at $WEIRD_PY"
+    return 0
+  fi
+
+  if [[ ! -f "$ZEEK_WEIRD_LOG" ]]; then
+    echo "⚠️  Skipping weird.log import: log file not found at $ZEEK_WEIRD_LOG"
+    return 0
+  fi
+
+  # Prefer venv in ../bin/zeek2ch, fall back to system python3
+  local PYTHON_BIN
+  if [[ -x "$ZEEK2CH_DIR/venv/bin/python" ]]; then
+    PYTHON_BIN="$ZEEK2CH_DIR/venv/bin/python"
+  elif [[ -x "$ZEEK2CH_DIR/.venv/bin/python" ]]; then
+    PYTHON_BIN="$ZEEK2CH_DIR/.venv/bin/python"
+  else
+    PYTHON_BIN="python3"
+  fi
+
+  echo "➡️  Importing Zeek weird.log via zeek2ch..."
+  "$PYTHON_BIN" "$WEIRD_PY" \
+    --host "$CH_HOST" \
+    --port "$CH_PORT" \
+    --user "$CH_USER" \
+    --password "$CH_PASSWORD" \
+    "$ZEEK_WEIRD_LOG"
+  echo "✅ Zeek weird.log import complete."
 }
 
 # --- Main Menu ---
@@ -85,6 +122,9 @@ case "$MODE" in
     export RUST_LOG="$RUST_LOG_LEVEL"
     "$BIN_PATH" --ch-url "$CH_URL" --ch-db "$CH_DB" --ch-user "$CH_USER" --ch-password "$CH_PASSWORD" \
       live --iface "$IFACE"
+
+    # 🔁 After live capture finishes, run the Zeek weird.py import
+    run_weird_import
     ;;
 
   3) # File Import
@@ -104,13 +144,14 @@ case "$MODE" in
     export RUST_LOG="$RUST_LOG_LEVEL"
     "$BIN_PATH" --ch-url "$CH_URL" --ch-db "$CH_DB" --ch-user "$CH_USER" --ch-password "$CH_PASSWORD" \
       file --path "$FILE_PATH" --insert --batch-size 5000
+
+    # 🔁 After file import, run the Zeek weird.py import
+    run_weird_import
     ;;
 
   4) # Reset DB (404 Fix: Target root / and use fully qualified names)
     echo "➡️  Discovering tables in $CH_DB..."
 
-    # We target the root URL (no ?database= parameter) to avoid 404 errors
-    # if the session state is inconsistent.
     TABLES=$(curl -fsS -u "$CH_USER:$CH_PASSWORD" \
       --data-binary "SELECT name FROM system.tables WHERE database='$CH_DB' AND engine LIKE '%MergeTree%'" \
       "$CH_URL/?wait_end_of_query=1")
