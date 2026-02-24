@@ -100,6 +100,12 @@ echo "4) Reset/Wipe Database (Preserve Schema)"
 echo "q) Quit"
 read -r -p "Select an option: " MODE
 
+# If user just hits Enter with no input
+if [[ -z "$MODE" ]]; then
+  echo "❌ Error: No option selected. Please run the script again and choose an option." >&2
+  exit 1
+fi
+
 [[ "$MODE" == "q" ]] && exit 0
 
 # --- Option 1: Docker (No DB Prompts) ---
