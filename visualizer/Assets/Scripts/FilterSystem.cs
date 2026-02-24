@@ -120,6 +120,32 @@ public class FilterSystem : MonoBehaviour
 
         // keep IP nodes on (or later you can hide them similarly)
         foreach (var ipGO in spawner.IpNodeList)
-            if (ipGO) ipGO.SetActive(true);
+{
+    if (!ipGO) continue;
+
+    var ipTag = ipGO.GetComponent<IpTag>();
+    if (ipTag == null || string.IsNullOrEmpty(ipTag.ipString))
+    {
+        ipGO.SetActive(true);
+        continue;
+    }
+
+    // ✅ If the spawner doesn't have an edge list for this IP yet,
+    // keep it visible (prevents "all IP nodes disappear" bug)
+    if (!spawner.EdgesByIpString.TryGetValue(ipTag.ipString, out var edges) || edges == null)
+    {
+        ipGO.SetActive(true);
+        continue;
+    }
+
+    bool anyActive = false;
+    for (int i = 0; i < edges.Count; i++)
+    {
+        var e = edges[i];
+        if (e && e.activeSelf) { anyActive = true; break; }
+    }
+
+    ipGO.SetActive(anyActive);
+}
     }
 }

@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+
+# ensure sudo
+if [[ $EUID -ne 0 ]]; then
+    echo "Error: This script must be run as root." >&2
+    exit 1
+fi
+
 set -euo pipefail
 
 # --- Config ---
@@ -9,8 +16,9 @@ RUST_LOG_LEVEL="info"
 
 # Zeek/Weird import config
 ZEEK2CH_DIR="../bin/zeek2ch"
-WEIRD_PY="$ZEEK2CH_DIR/weird.py"
+WEIRD_PY="$ZEEK2CH_DIR/zeek.py"
 ZEEK_WEIRD_LOG="../zeek/zeek-logs/weird.log"
+ZEEK_NOTICE_LOG="../zeek/zeek-logs/notice.log"
 
 # --- Helpers ---
 ask() {
@@ -75,7 +83,9 @@ run_weird_import() {
     --port "$CH_PORT" \
     --user "$CH_USER" \
     --password "$CH_PASSWORD" \
-    "$ZEEK_WEIRD_LOG"
+    --weird "$ZEEK_WEIRD_LOG" \
+    --notice "$ZEEK_NOTICE_LOG"
+
   echo "✅ Zeek weird.log import complete."
 }
 
@@ -89,6 +99,12 @@ echo "3) File Import (.pcap/.pcapng)"
 echo "4) Reset/Wipe Database (Preserve Schema)"
 echo "q) Quit"
 read -r -p "Select an option: " MODE
+
+# If user just hits Enter with no input
+if [[ -z "$MODE" ]]; then
+  echo "❌ Error: No option selected. Please run the script again and choose an option." >&2
+  exit 1
+fi
 
 [[ "$MODE" == "q" ]] && exit 0
 
