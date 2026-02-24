@@ -22,8 +22,8 @@ get_default_nic() {
 # explain and confirm installation steps, verify linux host
 echo "This script will set up the clickhouse (database) and zeek (IDS) backend for netvis."
 echo "This automates the default configuration, where both backend containers will be run on this host."
-echo "If you want customize the backend deployment, please follow the manual instructions in docs directory."
-read -p "Please ensure you are running an up-to-date linux server. Do you wish to continue? (y/n)" CONTINUE
+echo "If you want customize the backend deployment, please follow the manual instructions in documentation directory."
+read -p "Please ensure you are running an up-to-date linux server. Do you wish to continue? (y/n) " CONTINUE
 if [[ $CONTINUE != "y" ]]; then
     echo "Installation cancelled."
     exit 1
@@ -32,7 +32,9 @@ fi
 # prompt for credentials and config info
 read -p "Enter ClickHouse username: " CLICKHOUSE_USER
 read -s -p "Enter ClickHouse password: " CLICKHOUSE_PASSWORD
+echo ""
 read -s -p "Confirm ClickHouse password: " CLICKHOUSE_PASSWORD_CONFIRM
+echo ""
 if [[ "$CLICKHOUSE_PASSWORD" != "$CLICKHOUSE_PASSWORD_CONFIRM" ]]; then
     echo "Error: Passwords do not match." >&2
     exit 1
@@ -60,7 +62,7 @@ echo "Installing docker"
 if [[ -x "$(which apt)" ]]; then
     # Add Docker's official GPG key:
     apt update
-    apt install ca-certificates curl
+    apt install -y ca-certificates curl
     install -m 0755 -d /etc/apt/keyrings
     curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
     chmod a+r /etc/apt/keyrings/docker.asc
@@ -76,7 +78,7 @@ EOF
 
     # install from new repo
     apt update
-    apt install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+    apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 else
     # https://docs.docker.com/engine/install/ubuntu/#install-using-the-convenience-script
     curl -fsSL https://get.docker.com -o get-docker.sh
@@ -94,13 +96,14 @@ if [[ -x "$(docker compose version)" ]]; then
 fi
 
 echo "Installing Rust"
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh` 2>/dev/null
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+source $HOME/.cargo/env
 
 echo "Installing C++ build tools"
-sudo apt install build-essentials 2>/dev/null
+sudo apt install -y build-essentials 2>/dev/null
 
 echo "Installing libpcap"
-sudo apt install libpcap-dev 2>/dev/null
+sudo apt install -y libpcap-dev 2>/dev/null
 
 # start containers
 IFACE=$(get_default_nic)
@@ -109,8 +112,12 @@ docker compose up ../docker -d
 
 # compile the parser binary
 echo "Compiling parser binary with cargo"
-cargo build --release --manifest-path ../parser/Cargo.toml
+cargo build --release --manifest-path ../bin/pcap2ch/Cargo.toml
 
 # direct user to run the parsers via the parser.sh script
 echo "Installation complete! You can now run the parsers using the parser.sh script in this directory."
-echo "You will also need to configure your unity project to point to this host for the database connection."
+echo "You will also need to save the information below to connect the frontend visualizer to the database:"
+echo "ClickHouse Host: $(ip route get 1.1.1.1 | grep -oP 'src \K\S+')"
+echo "ClickHouse Port: $CLICKHOUSE_PORT"
+echo "ClickHouse Database: $CLICKHOUSE_DB"
+echo "ClickHouse User: $CLICKHOUSE_USER"
