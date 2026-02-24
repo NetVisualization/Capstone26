@@ -26,6 +26,11 @@ public class NodeSpawnerScript : MonoBehaviour
     public Material ConnectionMed;   // MAC<->IP
     public Material ConnectionHeavy; // (unused here)
 
+    [Header("Node Status Materials")]
+    [SerializeField] private Material normalNodeMaterial;
+    [SerializeField] private Material warningNodeMaterial; // yellow
+    [SerializeField] private Material alertNodeMaterial;   // red
+
     // ---------------------------------------------------------------------
     // DB / External
     // ---------------------------------------------------------------------
@@ -74,6 +79,8 @@ public class NodeSpawnerScript : MonoBehaviour
     // ---- Public node access for filtering ----
 public IReadOnlyList<GameObject> MacNodeList => spawnedMacNodes;
 public IEnumerable<GameObject> IpNodeList => IpNodes.Values;
+private readonly Dictionary<string, List<GameObject>> edgesByIpString = new();
+public IReadOnlyDictionary<string, List<GameObject>> EdgesByIpString => edgesByIpString;
 
 // easy "everything" view (MAC + IP nodes)
 public IEnumerable<GameObject> AllNodes => spawnedMacNodes.Concat(IpNodes.Values);
@@ -209,6 +216,8 @@ public IReadOnlyDictionary<IPAddress, List<GameObject>> EdgesByIp => edgesByIp;
             GameObject go = Instantiate(NodePrefab);
             var info = go.GetComponent<NodeInfo>();
             info.Initialize(node);
+
+            ApplyNodeStatusMaterial(go, node);
 
             var p = go.transform.position; p.y = MacPlaneY; go.transform.position = p;
 
@@ -485,6 +494,11 @@ public IReadOnlyDictionary<IPAddress, List<GameObject>> EdgesByIp => edgesByIp;
 
         GameObject go = Instantiate(NodePrefab);
         var p = go.transform.position; p.y = IpPlaneY; go.transform.position = p;
+
+        var tag = go.GetComponent<IpTag>();
+        if (!tag) tag = go.AddComponent<IpTag>();
+        tag.ipString = ip.ToString();
+
         EnsureSphereCollider(go, 0.25f);
         IpNodes[ip] = go;
         return go;
@@ -584,6 +598,57 @@ public IReadOnlyDictionary<IPAddress, List<GameObject>> EdgesByIp => edgesByIp;
 
         r.SetPropertyBlock(_mpb);
     }
+
+    // ---------------- Node status coloring ----------------
+    private void ApplyNodeStatusMaterial(GameObject nodeGO, Node nodeData)
+{
+    if (nodeGO == null) return;
+
+    var renderers = nodeGO.GetComponentsInChildren<Renderer>(true);
+    if (renderers == null || renderers.Length == 0) return;
+
+    // Determine if we need an override
+    bool isAlert = nodeData.isAlert;
+    bool isWarning = nodeData.isWarning;
+
+    foreach (var r in renderers)
+    {
+        if (r == null) continue;
+
+        // If NOT alert or warning → reset to original material color
+        if (!isAlert && !isWarning)
+        {
+            r.SetPropertyBlock(null);   // 🔥 This restores the material's default color
+            continue;
+        }
+
+        if (_mpb == null) _mpb = new MaterialPropertyBlock();
+        r.GetPropertyBlock(_mpb);
+
+        Color c = isAlert ? Color.red : Color.yellow;
+
+        _mpb.SetColor("_Color", c);      // Standard
+        _mpb.SetColor("_BaseColor", c);  // URP
+
+        r.SetPropertyBlock(_mpb);
+    }
+}
+
+// Update an existing MAC node GO if it already exists (used for live polling)
+private void UpdateExistingMacNodeVisuals(Node nodeData)
+{
+    string macKey = nodeData.mac?.ToString();
+    if (string.IsNullOrEmpty(macKey)) return;
+
+    if (NodeObjects.TryGetValue(macKey, out var go) && go != null)
+    {
+        // keep NodeInfo in sync too (optional but recommended)
+        var info = go.GetComponent<NodeInfo>();
+        if (info != null) info.Initialize(nodeData);
+
+        ApplyNodeStatusMaterial(go, nodeData);
+    }
+}
 
 
     // ---------------------------------------------------------------------
@@ -720,6 +785,7 @@ public IReadOnlyDictionary<IPAddress, List<GameObject>> EdgesByIp => edgesByIp;
 
         if (tag.ip != null)
         {
+            string ipKey = tag.ip.ToString();
             if (!edgesByIp.TryGetValue(tag.ip, out var listI))
                 edgesByIp[tag.ip] = listI = new List<GameObject>();
             listI.Add(edge);
@@ -774,6 +840,12 @@ public IReadOnlyDictionary<IPAddress, List<GameObject>> EdgesByIp => edgesByIp;
 
             // check for any new zeek alerts
             newNodes = await dataManager.FlagWeirdNodes(lastFetchTime, newNodes);
+
+            // Update visuals for nodes that already exist (warning/alert flags may change)
+            foreach (var n in newNodes)
+            {       
+                UpdateExistingMacNodeVisuals(n);
+            }
             
             var warningIps = newNodes.Where(node => node.isWarning).SelectMany(node => node.ips);
             foreach (var ip in warningIps)
@@ -876,6 +948,7 @@ public IReadOnlyDictionary<IPAddress, List<GameObject>> EdgesByIp => edgesByIp;
         GameObject go = Instantiate(NodePrefab);
         var info = go.GetComponent<NodeInfo>();
         info.Initialize(node);
+        ApplyNodeStatusMaterial(go, node);
 
         // quick placement: near its subnet hub, on the MAC plane
         IPAddress primary = (node.ips != null && node.ips.Count > 0) ? node.ips[0] : null;
