@@ -9,7 +9,7 @@ The current iteration of the parser can only view traffic that is directed throu
 3. Install Rust with the following command: `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh`
 4. Install the C++ build essentials tools:
 	- Windows: https://visualstudio.microsoft.com/vs/features/cplusplus/
-	- Linux: `sudo apt install build-essentials`
+	- Linux: `sudo apt install build-essential`
 5. Ensure the Rust Compiler points to the npcap library, which is distributed with the project for Windows. Or, install the libpcap library for linux:
 	- Windows: `$env:LIB = ".\lib\npcap-sdk-1.15\Lib\x64"`
 	- Linux: `sudo apt install libpcap-dev`
