@@ -103,8 +103,8 @@ sudo apt install -y libpcap-dev 2>/dev/null
 
 # start containers and build custom zeek image
 IFACE=$(get_default_nic)
-sed -i "s/command: zeek -C -i ens160 local/command: zeek -C -i $IFACE local/" docker-compose.yml
-docker compose up ../docker -d
+sed -i "s/command: zeek -C -i ens160 local/command: zeek -C -i $IFACE local/" ../docker/docker-compose.yml
+docker compose -f ../docker/docker-compose.yml up -d
 
 # compile the parser binary
 echo "Compiling parser binary with cargo"
