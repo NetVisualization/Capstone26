@@ -1,0 +1,6 @@
+#fields	indicator	indicator_type	meta.source	meta.desc	meta.do_notice
+cd08e31494f9531f560d64c695473da9	Intel::JA3	Malware_Feed	Meterpreter_Reverse_HTTPS	T
+b8c2c10db4e5b8712e0303ba73e65593	Intel::HASSH	Internal_Research	Hydra_SSH_BruteForce	T
+3a228fb464edb0716613303c7373f1d4	Intel::HASSH	Scanner_Feed	Nmap_SSH_Script	T
+51c64c77e60f3980eea90869b68c58a8	Intel::JA3	Scanner_Feed	Nmap_SSL_Scan	T
+d48a04b1236fb6bc432a18858db1b9d4	Intel::JA3	Scanner_Feed	Nmap_NSE_Scan	T
