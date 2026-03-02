@@ -128,7 +128,7 @@ fi
 # --- DB Connection Inputs (For Options 2, 3, 4) ---
 echo -e "\n--- ClickHouse Connection ---"
 ask "ClickHouse Host"     CH_HOST     "localhost"
-ask "ClickHouse Port"     CH_PORT     "8123"
+ask "ClickHouse Port"     CH_PORT     "${CLICKHOUSE_PORT:-8123}"
 ask "ClickHouse Database" CH_DB       "net"
 ask "ClickHouse User"     CH_USER     "capstone"
 ask_secret "ClickHouse Password"      CH_PASSWORD
