@@ -45,11 +45,10 @@ if [[ -z "$CLICKHOUSE_DB" ]]; then
 fi
 
 # save to .env file for docker-compose
-cat > .env <<EOL
+cat > ../docker/.env <<EOL
 CLICKHOUSE_USER=$CLICKHOUSE_USER
 CLICKHOUSE_PASSWORD=$CLICKHOUSE_PASSWORD
 CLICKHOUSE_DB=$CLICKHOUSE_DB
-CLICKHOUSE_PORT=$CLICKHOUSE_PORT
 EOL
 
 # install dependencies (docker, docker-compose, rust, cargo, etc.)

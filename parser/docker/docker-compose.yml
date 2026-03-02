@@ -6,9 +6,9 @@ services:
     container_name: clickhouse
     restart: unless-stopped
     environment:
-      CLICKHOUSE_DB: net
-      CLICKHOUSE_USER: capstone
-      CLICKHOUSE_PASSWORD: boogle
+      CLICKHOUSE_DB: ${CLICKHOUSE_DB}
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD}
       CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: "1"
     ports:
       - "8123:8123"
