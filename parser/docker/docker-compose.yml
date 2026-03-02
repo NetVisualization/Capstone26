@@ -46,7 +46,6 @@ services:
     volumes:
       - ../zeek/logs:/usr/local/zeek/logs
       - ../zeek/config/local.zeek:/usr/local/zeek/share/zeek/site/local.zeek:ro
-      - ../zeek/config/intel.dat:/usr/local/zeek/share/zeek/site/local.zeek:ro
       - ../zeek/config/scripts:/usr/local/zeek/share/zeek/site/scripts:ro
     # Change interface for user specific machine
     command: zeek -C -i ens160 local
