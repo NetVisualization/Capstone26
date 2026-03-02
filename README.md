@@ -40,6 +40,8 @@ To begin, you must have an operational Linux server (stand-alone or otherwise). 
 Within your Linux server, you can begin the setup of the backend architecture
 1. On your system, run install.sh (found in parser/scripts). This sets up the Clickhouse database and the Zeek IDS capabilities.
 2. To capture network traffic for analysis within the program, run parser.sh (also located in parser/scripts).
+
+
 ### GitLab 
 
 Our project repository resides on GitLab, which is another collaborative platform similar to GitHub. An account can be easily created through an existing GitHub account. This repository is also hosted on our internal server (Cyber-Team). 
@@ -112,7 +114,7 @@ The parser is coded in Rust and is responsible for parsing the live data traffic
 
 ### Database (Clickhouse) 
 
-The database stores the information parsed from the input pcap file. We utilized Clickhouse for its implementation. In our case, we hosted our database on a local web server utilizing port 8123. In this configuration, we can access the database directly through the URL http://localhost:8123 while on our local internet source (though USAFA firewall/security configurations may need to be altered to accomplish this) 
+The database stores the information parsed from the input pcap file. We utilized Clickhouse for its implementation. In our case, we hosted our database on a local web server utilizing port 8123. In this configuration, we can access the database directly through the URL http://[your IP]:8123 while on our local internet source (though USAFA firewall/security configurations may need to be altered to accomplish this) 
 
  
 
