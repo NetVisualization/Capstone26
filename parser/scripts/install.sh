@@ -39,10 +39,6 @@ if [[ "$CLICKHOUSE_PASSWORD" != "$CLICKHOUSE_PASSWORD_CONFIRM" ]]; then
     echo "Error: Passwords do not match." >&2
     exit 1
 fi
-read -p "Enter Clickhouse database name (default: net): " CLICKHOUSE_DB
-if [[ -z "$CLICKHOUSE_DB" ]]; then
-    CLICKHOUSE_DB="net"
-fi
 read -p "Enter ClickHouse external port (default: 8123): " CLICKHOUSE_PORT
 if [[ -z "$CLICKHOUSE_PORT" ]]; then
     CLICKHOUSE_PORT="8123"
@@ -52,7 +48,7 @@ fi
 cat > ../docker/.env <<EOL
 CLICKHOUSE_USER=$CLICKHOUSE_USER
 CLICKHOUSE_PASSWORD=$CLICKHOUSE_PASSWORD
-CLICKHOUSE_DB=$CLICKHOUSE_DB
+CLICKHOUSE_DB=net
 CLICKHOUSE_PORT=$CLICKHOUSE_PORT
 EOL
 
