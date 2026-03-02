@@ -17,8 +17,8 @@ RUST_LOG_LEVEL="info"
 # Zeek/Weird import config
 ZEEK2CH_DIR="../bin/zeek2ch"
 WEIRD_PY="$ZEEK2CH_DIR/zeek.py"
-ZEEK_WEIRD_LOG="../zeek/zeek-logs/weird.log"
-ZEEK_NOTICE_LOG="../zeek/zeek-logs/notice.log"
+ZEEK_WEIRD_LOG="../zeek/logs/weird.log"
+ZEEK_NOTICE_LOG="../zeek/logs/notice.log"
 
 # --- Helpers ---
 ask() {
