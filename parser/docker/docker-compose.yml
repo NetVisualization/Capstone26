@@ -6,9 +6,9 @@ services:
     container_name: clickhouse
     restart: unless-stopped
     environment:
-      CLICKHOUSE_DB: net
-      CLICKHOUSE_USER: capstone
-      CLICKHOUSE_PASSWORD: boogle
+      CLICKHOUSE_DB: ${CLICKHOUSE_DB}
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD}
       CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: "1"
     ports:
       - "8123:8123"
@@ -31,7 +31,9 @@ services:
 
   zeek:
     #image: zeek/zeek:latest
-    build: . # build from the local dockerfile which installs some packages on top of the base zeek image
+    build:
+      context: ..
+      dockerfile: ./docker/Dockerfile
     container_name: zeek
     restart: unless-stopped
     environment:
@@ -43,10 +45,10 @@ services:
       - NET_RAW
     volumes:
       - ../zeek/logs:/usr/local/zeek/logs
-      - ../zeek/scripts:/usr/local/zeek/share/zeek/site/scripts
-      - ../zeek/config/local.zeek:/usr/local/zeek/share/zeek/site/local.zeek
+      - ../zeek/config/local.zeek:/usr/local/zeek/share/zeek/site/local.zeek:ro
+      - ../zeek/config/scripts:/usr/local/zeek/share/zeek/site/scripts:ro
     # Change interface for user specific machine
-    command: zeek -C -p -i ens160 local
+    command: zeek -C -i ens160 local
 
 networks:
   netvis:

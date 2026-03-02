@@ -19,7 +19,7 @@ public class VisIface : MonoBehaviour
     public string DB_PORT = "8123";
     public string DB_USER = "capstone";
     public string DB_PASS = "boogle";
-    
+
     // Unity MonoBehaviour owns the raw db conn
     private DBConnection _connection;
 
@@ -168,21 +168,18 @@ public class VisIface : MonoBehaviour
     }
 
     /// <summary>
-    /// Query the weird table and flag nodes that have warnings
+    /// Query the weird table and flag nodes that have warnings (will be colored yellow
     /// </summary>
     public async Task<List<Node>> FlagWeirdNodes(DateTime time, List<Node> loadedNodes)
     {
-        // time based approach doesn't work for init
-        // string sql = "SELECT resp_h FROM net.weird WHERE weird.ts > toDateTime(@time)";
-        string sql = "SELECT resp_h FROM net.weird";
+        string sql = "SELECT orig_h FROM net.weird WHERE weird.ts > toDateTime(@time)";
+        var parameters = new Dictionary<string, object> { { "time", time } };
 
-        // var parameters = new Dictionary<string, object> { { "time", time } };
-
-        using var reader = await _connection.ExecuteReader(sql); // , parameters);
+        using var reader = await _connection.ExecuteReader(sql, parameters);
         List<IPAddress> ips = new List<IPAddress>();
         while (reader.Read())
         {
-            var rawData = reader["resp_h"];
+            var rawData = reader["orig_h"];
             if (rawData is IPAddress[] ipArray)
             {
                 ips.AddRange(ipArray);
@@ -192,7 +189,7 @@ public class VisIface : MonoBehaviour
                 ips.Add(singleIp);
             }
         }
-        
+
         // update nodes whose IP addresses match warnings above.
         foreach (IPAddress ip in ips)
         {
@@ -209,11 +206,40 @@ public class VisIface : MonoBehaviour
     }
 
     /// <summary>
-    /// Query the weird table and flag nodes that have warnings
+    /// Query the notice table and flag nodes that have alerts (will be colored red)
     /// </summary>
-    //public async Task<List<Connection>> FlagAlertNodes(DateTime time)
-    //{
+    public async Task<List<Node>> FlagAlertedNodes(DateTime time, List<Node> loadedNodes)
+    {
+        string sql = "SELECT src FROM net.notice WHERE notice.ts > toDateTime(@time);";
+        var parameters = new Dictionary<string, object> { { "time", time } };
 
-    //}
+        using var reader = await _connection.ExecuteReader(sql, parameters);
+        List<IPAddress> ips = new List<IPAddress>();
+        while (reader.Read())
+        {
+            var rawData = reader["src"];
+            if (rawData is IPAddress[] ipArray)
+            {
+                ips.AddRange(ipArray);
+            }
+            else if (rawData is IPAddress singleIp)
+            {
+                ips.Add(singleIp);
+            }
+        }
 
+        // update nodes whose IP addresses match warnings above.
+        foreach (IPAddress ip in ips)
+        {
+            var index = loadedNodes.FindIndex(Node => Node.ips.Contains(ip));
+            if (index != -1)
+            {
+                var temp = loadedNodes[index];
+                temp.isAlert = true;
+                loadedNodes[index] = temp;
+            }
+        }
+
+        return loadedNodes;
+    }
 }

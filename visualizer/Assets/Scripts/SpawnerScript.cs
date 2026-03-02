@@ -162,6 +162,10 @@ public IReadOnlyDictionary<IPAddress, List<GameObject>> EdgesByIp => edgesByIp;
         Debug.Log($"{ConnectionList.Count} connections");
         Debug.Log($"{SubConnectionList.Count} sub-connections");
 
+        // check for any new zeek alerts
+        nodeList = await dataManager.FlagWeirdNodes(initTime, nodeList);
+        nodeList = await dataManager.FlagAlertedNodes(initTime, nodeList);
+
         // 0) Build shared subnet order from ALL IPs we see (for alignment)
         subnetOrder = ComputeSubnetOrder();
 
@@ -840,6 +844,7 @@ private void UpdateExistingMacNodeVisuals(Node nodeData)
 
             // check for any new zeek alerts
             newNodes = await dataManager.FlagWeirdNodes(lastFetchTime, newNodes);
+            newNodes = await dataManager.FlagAlertedNodes(lastFetchTime, newNodes);
 
             // Update visuals for nodes that already exist (warning/alert flags may change)
             foreach (var n in newNodes)
@@ -848,10 +853,6 @@ private void UpdateExistingMacNodeVisuals(Node nodeData)
             }
             
             var warningIps = newNodes.Where(node => node.isWarning).SelectMany(node => node.ips);
-            foreach (var ip in warningIps)
-            {
-                Debug.Log($"weird node to color yellow: {ip.ToString()}");
-            }
 
 
             // 2) Update timestamps

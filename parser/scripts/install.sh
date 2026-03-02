@@ -43,17 +43,12 @@ read -p "Enter Clickhouse database name (default: net): " CLICKHOUSE_DB
 if [[ -z "$CLICKHOUSE_DB" ]]; then
     CLICKHOUSE_DB="net"
 fi
-read -p "Enter Clickhouse port (default: 8123): " CLICKHOUSE_PORT
-if [[ -z "$CLICKHOUSE_PORT" ]]; then
-    CLICKHOUSE_PORT=8123
-fi
 
 # save to .env file for docker-compose
-cat > .env <<EOL
+cat > ../docker/.env <<EOL
 CLICKHOUSE_USER=$CLICKHOUSE_USER
 CLICKHOUSE_PASSWORD=$CLICKHOUSE_PASSWORD
 CLICKHOUSE_DB=$CLICKHOUSE_DB
-CLICKHOUSE_PORT=$CLICKHOUSE_PORT
 EOL
 
 # install dependencies (docker, docker-compose, rust, cargo, etc.)
@@ -100,15 +95,15 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 source $HOME/.cargo/env
 
 echo "Installing C++ build tools"
-sudo apt install -y build-essentials 2>/dev/null
+sudo apt install -y build-essential 2>/dev/null
 
 echo "Installing libpcap"
 sudo apt install -y libpcap-dev 2>/dev/null
 
-# start containers
+# start containers and build custom zeek image
 IFACE=$(get_default_nic)
-sed -i "s/command: zeek -C -i ens160 local/command: zeek -C -i $IFACE local/" docker-compose.yml
-docker compose up ../docker -d
+sed -i "s/command: zeek -C -i ens160 local/command: zeek -C -i $IFACE local/" ../docker/docker-compose.yml
+docker compose -f ../docker/docker-compose.yml up -d
 
 # compile the parser binary
 echo "Compiling parser binary with cargo"
@@ -118,6 +113,6 @@ cargo build --release --manifest-path ../bin/pcap2ch/Cargo.toml
 echo "Installation complete! You can now run the parsers using the parser.sh script in this directory."
 echo "You will also need to save the information below to connect the frontend visualizer to the database:"
 echo "ClickHouse Host: $(ip route get 1.1.1.1 | grep -oP 'src \K\S+')"
-echo "ClickHouse Port: $CLICKHOUSE_PORT"
+echo "ClickHouse Port: 8123"
 echo "ClickHouse Database: $CLICKHOUSE_DB"
 echo "ClickHouse User: $CLICKHOUSE_USER"
