@@ -17,8 +17,8 @@ Zeek weird.log & notice.log -> ClickHouse net.weird / net.notice ingester (HTTP 
 
 Example:
     python3 zeek.py --host localhost --port 8123 --user capstone --password boogle \
-        --weird ../../zeek/zeek-logs/weird.log \
-        --notice ../../zeek/zeek-logs/notice.log
+        --weird ../../zeek/logs/weird.log \
+        --notice ../../zeek/logs/notice.log
 """
 
 import argparse

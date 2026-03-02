@@ -55,15 +55,20 @@ require_binary() {
   fi
 }
 
-run_weird_import() {
+run_zeek_import() {
   # Runs ../bin/zeek2ch/weird.py via its venv (if present) to import ../zeek/zeek-logs/weird.log
   if [[ ! -f "$WEIRD_PY" ]]; then
-    echo "⚠️  Skipping weird.log import: script not found at $WEIRD_PY"
+    echo "Skipping weird.log import: script not found at $WEIRD_PY"
     return 0
   fi
 
   if [[ ! -f "$ZEEK_WEIRD_LOG" ]]; then
-    echo "⚠️  Skipping weird.log import: log file not found at $ZEEK_WEIRD_LOG"
+    echo "Skipping weird.log import: log file not found at $ZEEK_WEIRD_LOG"
+    return 0
+  fi
+
+  if [[ ! -f "$ZEEK_NOTICE_LOG" ]]; then
+    echo "Skipping notice.log import: log file not found at $ZEEK_NOTICE_LOG"
     return 0
   fi
 
@@ -86,7 +91,7 @@ run_weird_import() {
     --weird "$ZEEK_WEIRD_LOG" \
     --notice "$ZEEK_NOTICE_LOG"
 
-  echo "✅ Zeek weird.log import complete."
+  echo "Zeek weird.log import complete."
 }
 
 # --- Main Menu ---
@@ -116,7 +121,7 @@ if [[ "$MODE" == "1" ]]; then
     fi
     echo "➡️  Launching NetVis stack..."
     (cd "$DOCKER_DIR" && docker compose up -d)
-    echo "✅ Containers are starting. Database schema will be initialized automatically."
+    echo "Containers are starting. Database schema will be initialized automatically."
     exit 0
 fi
 
@@ -131,17 +136,45 @@ CH_PASSWORD="${CH_PASSWORD:-boogle}"
 CH_URL="http://${CH_HOST}:${CH_PORT}"
 
 case "$MODE" in
-  2) # Live Capture
-    DEFAULT_IFACE=$(get_default_nic)
-    ask "Live interface" IFACE "$DEFAULT_IFACE"
-    require_binary
-    export RUST_LOG="$RUST_LOG_LEVEL"
-    "$BIN_PATH" --ch-url "$CH_URL" --ch-db "$CH_DB" --ch-user "$CH_USER" --ch-password "$CH_PASSWORD" \
-      live --iface "$IFACE"
+    2) # Live Capture
+        DEFAULT_IFACE=$(get_default_nic)
+        ask "Live interface" IFACE "$DEFAULT_IFACE"
+        require_binary
+        export RUST_LOG="$RUST_LOG_LEVEL"
 
-    # 🔁 After live capture finishes, run the Zeek weird.py import
-    run_weird_import
-    ;;
+        echo "Starting live capture and periodic Zeek import..."
+
+        # 1. Start the main Rust parser in the background
+        # Redirecting stdin from /dev/null prevents it from grabbing keyboard focus
+        "$BIN_PATH" --ch-url "$CH_URL" --ch-db "$CH_DB" --ch-user "$CH_USER" --ch-password "$CH_PASSWORD" \
+          live --iface "$IFACE" < /dev/null &
+        PARSER_PID=$!
+
+        # 2. Start a background loop for Zeek imports every 30 seconds
+        (
+          while true; do
+            run_zeek_import
+            sleep 30
+          done
+        ) &
+        ZEEK_LOOP_PID=$!
+
+        echo "Processes are running (Parser PID: $PARSER_PID, Zeek Loop PID: $ZEEK_LOOP_PID)."
+        echo "Press [ENTER] to stop both processes..."
+
+        # 3. Wait for user input in the main shell
+        read -r
+
+        # 4. Graceful Shutdown
+        echo "Stopping processes..."
+        # kill -2 simulates Ctrl-C for the Rust parser's graceful flush
+        kill -2 "$PARSER_PID" 2>/dev/null
+        # Kill the background while-loop
+        kill "$ZEEK_LOOP_PID" 2>/dev/null
+
+        wait "$PARSER_PID" 2>/dev/null
+        echo "Live capture stopped."
+        ;;
 
   3) # File Import
     mkdir -p "$SCANS_DIR"
@@ -161,8 +194,8 @@ case "$MODE" in
     "$BIN_PATH" --ch-url "$CH_URL" --ch-db "$CH_DB" --ch-user "$CH_USER" --ch-password "$CH_PASSWORD" \
       file --path "$FILE_PATH" --insert --batch-size 5000
 
-    # 🔁 After file import, run the Zeek weird.py import
-    run_weird_import
+    # After file import, run the Zeek weird.py import
+    run_zeek_import
     ;;
 
   4) # Reset DB (404 Fix: Target root / and use fully qualified names)
