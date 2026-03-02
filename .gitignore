@@ -129,8 +129,8 @@ target
 **/Temp/
 **/Logs/
 **/Library/
-**/Assets/
 **/Assets/Packages/
+**/Assets/**/*.meta
 **/.vs/
 **/obj/
 **/UserSettings/
