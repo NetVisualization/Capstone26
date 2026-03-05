@@ -139,6 +139,7 @@ target
 **/*.csproj
 **/.idea/
 **/.vscode/
+.vscode/
 **/.vsconfig
 **/*.unityproj
 **/*.suo
@@ -161,6 +162,7 @@ target
 
 # OS Generated Junk
 */.DS_Store
+.DS_Store
 Thumbs.db
 ehthumbs.db
 Desktop.ini
