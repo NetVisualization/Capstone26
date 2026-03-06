@@ -130,7 +130,6 @@ target
 **/Logs/
 **/Library/
 **/Assets/Packages/
-**/Assets/**/*.meta
 **/Assets/NuGet/
 **/.vs/
 **/obj/
