@@ -39,16 +39,17 @@ if [[ "$CLICKHOUSE_PASSWORD" != "$CLICKHOUSE_PASSWORD_CONFIRM" ]]; then
     echo "Error: Passwords do not match." >&2
     exit 1
 fi
-read -p "Enter Clickhouse database name (default: net): " CLICKHOUSE_DB
-if [[ -z "$CLICKHOUSE_DB" ]]; then
-    CLICKHOUSE_DB="net"
+read -p "Enter ClickHouse external port (default: 8123): " CLICKHOUSE_PORT
+if [[ -z "$CLICKHOUSE_PORT" ]]; then
+    CLICKHOUSE_PORT="8123"
 fi
 
 # save to .env file for docker-compose
 cat > ../docker/.env <<EOL
 CLICKHOUSE_USER=$CLICKHOUSE_USER
 CLICKHOUSE_PASSWORD=$CLICKHOUSE_PASSWORD
-CLICKHOUSE_DB=$CLICKHOUSE_DB
+CLICKHOUSE_DB=net
+CLICKHOUSE_PORT=$CLICKHOUSE_PORT
 EOL
 
 # install dependencies (docker, docker-compose, rust, cargo, etc.)
@@ -113,6 +114,6 @@ cargo build --release --manifest-path ../bin/pcap2ch/Cargo.toml
 echo "Installation complete! You can now run the parsers using the parser.sh script in this directory."
 echo "You will also need to save the information below to connect the frontend visualizer to the database:"
 echo "ClickHouse Host: $(ip route get 1.1.1.1 | grep -oP 'src \K\S+')"
-echo "ClickHouse Port: 8123"
+echo "ClickHouse Port: $CLICKHOUSE_PORT"
 echo "ClickHouse Database: $CLICKHOUSE_DB"
 echo "ClickHouse User: $CLICKHOUSE_USER"

@@ -14,6 +14,8 @@ SCANS_DIR="../scans/"
 DOCKER_DIR="../docker/"
 RUST_LOG_LEVEL="info"
 
+CH_DB="net"
+
 # Zeek/Weird import config
 ZEEK2CH_DIR="../bin/zeek2ch"
 WEIRD_PY="$ZEEK2CH_DIR/zeek.py"
@@ -128,8 +130,7 @@ fi
 # --- DB Connection Inputs (For Options 2, 3, 4) ---
 echo -e "\n--- ClickHouse Connection ---"
 ask "ClickHouse Host"     CH_HOST     "localhost"
-ask "ClickHouse Port"     CH_PORT     "8123"
-ask "ClickHouse Database" CH_DB       "net"
+ask "ClickHouse Port"     CH_PORT     "${CLICKHOUSE_PORT:-8123}"
 ask "ClickHouse User"     CH_USER     "capstone"
 ask_secret "ClickHouse Password"      CH_PASSWORD
 CH_PASSWORD="${CH_PASSWORD:-boogle}"
