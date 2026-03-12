@@ -1,73 +1,66 @@
 using TMPro;
 using UnityEngine;
-using UnityEngine.UI;   // <-- IMPORTANT (for LayoutRebuilder)
 
 public class InfoPannelController : MonoBehaviour
 {
     [Header("UI References")]
     [SerializeField] private TextMeshProUGUI infoText;
 
-    // Drag your black Panel (background) RectTransform here in the Inspector
-    [SerializeField] private RectTransform panelRect;
 
     public void setText(NodeInfo data)
     {
-        if (data == null) {
-            Debug.LogWarning("data is null");
+        if (data == null)
+        {
+            Debug.LogWarning("NodeInfo data is null");
             return;
         }
 
         var node = data.data;
 
-        string ips = string.Join(",", node.ips);
-        string src_ports = string.Join(",", node.src_ports);
-        string l7_protos = string.Join(",", node.l7_protos);
+        string ips = string.Join(", ", node.ips);
+        string src_ports = string.Join(", ", node.src_ports);
+        string l7_protos = string.Join(", ", node.l7_protos);
 
         infoText.text =
-            $"<b>Mac Address:</b> {node.mac}\n" +
-            $"<b># packets:</b> {node.pkts}\n" +
-            $"<b># Bytes:</b> {node.bytes}\n" +
-            $"<b>First Seen:</b> {node.first_seen}\n" +
-            $"<b>Last Seen:</b> {node.last_seen}\n" +
-            $"<b>Degree:</b> {node.degree}\n" +
-            $"<b>IP Address:</b> {ips}\n" +
-            $"<b>Source Ports:</b> {src_ports}\n" +
-            $"<b>Layer 7:</b> {l7_protos}\n" +
-            $"<b>Vendor:</b> {node.device_type}\n";
+            $"Mac Address: {node.mac}    " +
+            $"Packets: {node.pkts}    " +
+            $"Bytes: {node.bytes}    " +
+            $"First Seen: {node.first_seen}    " +
+            $"Last Seen: {node.last_seen}    " +
+            $"Degree: {node.degree}    " +
+            $"IP Address: {ips}    " +
+            $"Source Ports: {src_ports}    " +
+            $"Layer 7: {l7_protos}    " +
+            $"Vendor: {node.device_type}";
 
-        RefreshLayout();
+        RestartScroll();
     }
 
     public void setText(ConnectionInfo data)
     {
         if (data == null)
         {
-            Debug.LogWarning("data is null");
+            Debug.LogWarning("ConnectionInfo data is null");
             return;
         }
 
         var node = data.data;
 
         infoText.text =
-            $"<b>Mac Address 1:</b> {node.node_a_macs}\n" +
-            $"<b>Mac Address 2:</b> {node.node_b_macs}\n" +
-            $"<b># packets:</b> {node.pkts}\n" +
-            $"<b># Bytes:</b> {node.bytes}\n";
+            $"Mac Address 1: {node.node_a_macs}    " +
+            $"Mac Address 2: {node.node_b_macs}    " +
+            $"Packets: {node.pkts}    " +
+            $"Bytes: {node.bytes}";
 
-        RefreshLayout();
+        RestartScroll();
     }
 
-    private void RefreshLayout()
+    private void RestartScroll()
     {
-        // If you forget to assign panelRect, fall back to the text's parent
-        if (panelRect == null)
-            panelRect = infoText.transform.parent as RectTransform;
+        if (infoText != null)
+            infoText.ForceMeshUpdate();
 
-        // Force TMP to update its geometry + preferred values
-        infoText.ForceMeshUpdate();
-
-        // Force Unity UI to recalc layout right now
-        Canvas.ForceUpdateCanvases();
-        LayoutRebuilder.ForceRebuildLayoutImmediate(panelRect);
+        if (autoScroll != null)
+            autoScroll.ResetToStart();
     }
 }
