@@ -1,3 +1,6 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;   // <-- IMPORTANT (for LayoutRebuilder)
@@ -17,6 +20,11 @@ public class InfoPannelController : MonoBehaviour
             return;
         }
 
+        // debug to validate view
+        List<String> alerts = new List<String> { "testAlert 1", "testAlert 2" };
+        String serializedAlerts = String.Join(", ", alerts);
+        Debug.Log($"printing {serializedAlerts} to info panel");
+
         var node = data.data;
 
         string ips = string.Join(",", node.ips);
@@ -33,7 +41,8 @@ public class InfoPannelController : MonoBehaviour
             $"<b>IP Address:</b> {ips}\n" +
             $"<b>Source Ports:</b> {src_ports}\n" +
             $"<b>Layer 7:</b> {l7_protos}\n" +
-            $"<b>Vendor:</b> {node.device_type}\n";
+            $"<b>Vendor:</b> {node.device_type}\n" +
+            $"<b>Alerts:</b> {serializedAlerts}\n";
 
         RefreshLayout();
     }
