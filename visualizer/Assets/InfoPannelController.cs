@@ -21,11 +21,12 @@ public class InfoPannelController : MonoBehaviour
         }
 
         // debug to validate view
-        List<String> alerts = new List<String> { "testAlert 1", "testAlert 2" };
-        String serializedAlerts = String.Join(", ", alerts);
-        Debug.Log($"printing {serializedAlerts} to info panel");
+        //List<String> alerts = new List<String> { "testAlert 1", "testAlert 2" };
+        //String serializedAlerts = String.Join(", ", alerts);
+        
 
         var node = data.data;
+        Debug.Log($"printing {node.alerts} to info panel");
 
         string ips = string.Join(",", node.ips);
         string src_ports = string.Join(",", node.src_ports);
@@ -42,7 +43,7 @@ public class InfoPannelController : MonoBehaviour
             $"<b>Source Ports:</b> {src_ports}\n" +
             $"<b>Layer 7:</b> {l7_protos}\n" +
             $"<b>Vendor:</b> {node.device_type}\n" +
-            $"<b>Alerts:</b> {serializedAlerts}\n";
+            $"<b>Alerts:</b> {node.alerts}\n";
 
         RefreshLayout();
     }
