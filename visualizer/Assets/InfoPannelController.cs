@@ -20,11 +20,6 @@ public class InfoPannelController : MonoBehaviour
             return;
         }
 
-        // debug to validate view
-        //List<String> alerts = new List<String> { "testAlert 1", "testAlert 2" };
-        //String serializedAlerts = String.Join(", ", alerts);
-        
-
         var node = data.data;
         Debug.Log($"printing {node.alerts} to info panel");
 

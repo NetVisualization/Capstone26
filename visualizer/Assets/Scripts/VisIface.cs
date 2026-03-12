@@ -243,7 +243,6 @@ public class VisIface : MonoBehaviour
             {
                 var temp = loadedNodes[index];
                 temp.isAlert = true;
-                // need to copy a list of strings into an uninitialized list of strings
                 temp.alerts = String.Join(", ", alertList);
                 loadedNodes[index] = temp;
             }
