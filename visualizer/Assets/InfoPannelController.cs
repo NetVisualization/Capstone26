@@ -1,3 +1,6 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using TMPro;
 using UnityEngine;
 
@@ -16,22 +19,24 @@ public class InfoPannelController : MonoBehaviour
         }
 
         var node = data.data;
+        Debug.Log($"printing {node.alerts} to info panel");
 
         string ips = string.Join(", ", node.ips);
         string src_ports = string.Join(", ", node.src_ports);
         string l7_protos = string.Join(", ", node.l7_protos);
 
         infoText.text =
-            $"Mac Address: {node.mac}    " +
-            $"Packets: {node.pkts}    " +
-            $"Bytes: {node.bytes}    " +
-            $"First Seen: {node.first_seen}    " +
-            $"Last Seen: {node.last_seen}    " +
-            $"Degree: {node.degree}    " +
-            $"IP Address: {ips}    " +
-            $"Source Ports: {src_ports}    " +
-            $"Layer 7: {l7_protos}    " +
-            $"Vendor: {node.device_type}";
+            $"<b>Mac Address:</b> {node.mac}\n" +
+            $"<b># packets:</b> {node.pkts}\n" +
+            $"<b># Bytes:</b> {node.bytes}\n" +
+            $"<b>First Seen:</b> {node.first_seen}\n" +
+            $"<b>Last Seen:</b> {node.last_seen}\n" +
+            $"<b>Degree:</b> {node.degree}\n" +
+            $"<b>IP Address:</b> {ips}\n" +
+            $"<b>Source Ports:</b> {src_ports}\n" +
+            $"<b>Layer 7:</b> {l7_protos}\n" +
+            $"<b>Vendor:</b> {node.device_type}\n" +
+            $"<b>Alerts:</b> {node.alerts}\n";
 
         RestartScroll();
     }

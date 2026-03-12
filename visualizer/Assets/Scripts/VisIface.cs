@@ -210,11 +210,12 @@ public class VisIface : MonoBehaviour
     /// </summary>
     public async Task<List<Node>> FlagAlertedNodes(DateTime time, List<Node> loadedNodes)
     {
-        string sql = "SELECT src FROM net.notice WHERE notice.ts > toDateTime(@time);";
+        string sql = "SELECT src, note FROM net.notice WHERE notice.ts > toDateTime(@time);";
         var parameters = new Dictionary<string, object> { { "time", time } };
 
         using var reader = await _connection.ExecuteReader(sql, parameters);
         List<IPAddress> ips = new List<IPAddress>();
+        List<String> alertList = new List<String>();
         while (reader.Read())
         {
             var rawData = reader["src"];
@@ -226,6 +227,12 @@ public class VisIface : MonoBehaviour
             {
                 ips.Add(singleIp);
             }
+
+            rawData = reader["note"];
+            if (rawData is not null)
+            {
+                alertList.Add((String)rawData);
+            }
         }
 
         // update nodes whose IP addresses match warnings above.
@@ -236,6 +243,7 @@ public class VisIface : MonoBehaviour
             {
                 var temp = loadedNodes[index];
                 temp.isAlert = true;
+                temp.alerts = String.Join(", ", alertList);
                 loadedNodes[index] = temp;
             }
         }
