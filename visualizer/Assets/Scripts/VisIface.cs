@@ -243,6 +243,7 @@ public class VisIface : MonoBehaviour
             {
                 var temp = loadedNodes[index];
                 temp.isAlert = true;
+                alertList = alertList.Distinct().ToList();
                 temp.alerts = String.Join(", ", alertList);
                 loadedNodes[index] = temp;
             }
