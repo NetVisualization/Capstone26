@@ -19,9 +19,7 @@ public class InfoPannelController : MonoBehaviour
         }
 
         var node = data.data;
-        Debug.Log($"printing {node.alerts} to info panel");
-
-        string ips = string.Join(", ", node.ips);
+        string ips = NetworkUtils.GetStandardizedIPString(node.ips);
         string src_ports = string.Join(", ", node.src_ports);
         string l7_protos = string.Join(", ", node.l7_protos);
 
