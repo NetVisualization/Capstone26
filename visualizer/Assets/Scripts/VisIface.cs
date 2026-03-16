@@ -168,7 +168,53 @@ public class VisIface : MonoBehaviour
     }
 
     /// <summary>
-    /// Query the weird table and flag nodes that have warnings (will be colored yellow
+    /// Get all subconnections from the database after a certain time
+    /// </summary>
+    public async Task<List<SubConnection>> GetSubonnectionsAfterAsync(DateTime time)
+    {
+        string sql = @"
+            SELECT
+                LEAST(hex(src_mac),hex(dst_mac)) AS mac_a,
+                groupUniqArray(if(src_mac <= dst_mac, src_ip, dst_ip)) AS ip_a,
+                GREATEST(hex(src_mac), hex(dst_mac)) AS mac_b,
+                groupUniqArray(if(src_mac <= dst_mac, dst_ip, src_ip)) AS ip_b,
+                MIN(first_seen) AS first_seen, 
+                MAX(last_seen) AS last_seen,
+                SUM(pkts) AS pkts,
+                SUM(bytes) AS bytes,
+                arrayDistinct(arrayFlatten(groupArrayArray(if(src_mac <= dst_mac, src_ports, dst_ports)))) AS ports_a,
+                arrayDistinct(arrayFlatten(groupArrayArray(if(src_mac <= dst_mac, dst_ports, src_ports)))) AS ports_b,
+                groupUniqArray(l7_proto) AS l7_protos,
+                groupUniqArray(l4_proto) AS protos
+            FROM subconnections WHERE subconnections.first_seen > toDateTime(@time)
+            GROUP BY mac_a, mac_b;";
+
+        var parameters = new Dictionary<string, object> { { "time", time } };
+        List<SubConnection> subConnections = new List<SubConnection>();
+
+        using var reader = await _connection.ExecuteReader(sql, parameters);
+
+        while (reader.Read())
+        {
+            SubConnection sc = new SubConnection();
+            sc.node_a = ((IPAddress[])reader["ip_a"]).ToList();
+            sc.node_b = ((IPAddress[])reader["ip_b"]).ToList();
+            sc.pkts = Convert.ToUInt64(reader.GetValue(reader.GetOrdinal("pkts")));
+            sc.bytes = Convert.ToUInt64(reader.GetValue(reader.GetOrdinal("bytes")));
+            sc.first_seen = reader.GetDateTime(reader.GetOrdinal("first_seen"));
+            string macHexA = reader.GetString(reader.GetOrdinal("mac_a"));
+            sc.node_a_macs = PhysicalAddress.Parse(macHexA);
+            string macHexB = reader.GetString(reader.GetOrdinal("mac_b"));
+            sc.node_b_macs = PhysicalAddress.Parse(macHexB);
+            sc.protocol = (l7_proto)reader.GetValue(reader.GetOrdinal("l7_protos"));
+
+            subConnections.Add(sc);
+        }
+        return subConnections;
+    }
+
+    /// <summary>
+    /// Query the weird table and flag nodes that have warnings (will be colored yellow)
     /// </summary>
     public async Task<List<Node>> FlagWeirdNodes(DateTime time, List<Node> loadedNodes)
     {
