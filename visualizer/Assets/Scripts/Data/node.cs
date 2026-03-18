@@ -20,5 +20,6 @@ namespace models
         public string device_type;
         public bool isWarning;
         public bool isAlert;
+        public String alerts;
     }
 }
