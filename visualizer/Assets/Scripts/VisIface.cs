@@ -184,10 +184,9 @@ public class VisIface : MonoBehaviour
                 SUM(bytes) AS bytes,
                 arrayDistinct(arrayFlatten(groupArrayArray(if(src_mac <= dst_mac, src_ports, dst_ports)))) AS ports_a,
                 arrayDistinct(arrayFlatten(groupArrayArray(if(src_mac <= dst_mac, dst_ports, src_ports)))) AS ports_b,
-                groupUniqArray(l7_proto) AS l7_protos,
-                groupUniqArray(l4_proto) AS protos
+                l7_proto
             FROM subconnections WHERE subconnections.first_seen > toDateTime(@time)
-            GROUP BY mac_a, mac_b;";
+            GROUP BY mac_a, mac_b, l7_proto;";
 
         var parameters = new Dictionary<string, object> { { "time", time } };
         List<SubConnection> subConnections = new List<SubConnection>();
@@ -206,7 +205,9 @@ public class VisIface : MonoBehaviour
             sc.node_a_macs = PhysicalAddress.Parse(macHexA);
             string macHexB = reader.GetString(reader.GetOrdinal("mac_b"));
             sc.node_b_macs = PhysicalAddress.Parse(macHexB);
-            sc.protocol = (l7_proto)reader.GetValue(reader.GetOrdinal("l7_protos"));
+            var l7 = (ushort)reader.GetValue(reader.GetOrdinal("l7_proto"));
+            sc.protocol = (l7_proto)l7;
+            //sc.protocol = (l7_proto)reader.GetValue(reader.GetOrdinal("l7_proto"));
 
             subConnections.Add(sc);
         }

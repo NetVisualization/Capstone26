@@ -148,15 +148,18 @@ public IReadOnlyDictionary<IPAddress, List<GameObject>> EdgesByIp => edgesByIp;
         DateTime initTime = new DateTime(1970, 01, 01, 00, 00, 00);
         var nodesTask =  dataManager.GetNodesAfterAsync(initTime);
         var connsTask = dataManager.GetConnectionsAfterAsync(initTime);
-        await Task.WhenAll(nodesTask, connsTask);
+        var scTask = dataManager.GetSubonnectionsAfterAsync(initTime);
+
+        await Task.WhenAll(nodesTask, connsTask, scTask);
         nodeList = nodesTask.Result;
         ConnectionList = connsTask.Result;
+        SubConnectionList = scTask.Result;
 
-        foreach (var conn in ConnectionList)
-        {
-            var parts = NetworkUtils.subdivideConnectionByProtocol(conn);
-            if (parts != null) SubConnectionList.AddRange(parts);
-        }
+        //foreach (var conn in ConnectionList)
+        //{
+        //    var parts = NetworkUtils.subdivideConnectionByProtocol(conn);
+        //    if (parts != null) SubConnectionList.AddRange(parts);
+        //}
         lastRender = DateTime.Now;
 
         Debug.Log($"{ConnectionList.Count} connections");
@@ -839,12 +842,18 @@ private void UpdateExistingMacNodeVisuals(Node nodeData)
         try
         {
             // 1) Ask DB for anything newer than lastFetchTime (Async)
-            var newNodes = await dataManager.GetNodesAfterAsync(lastFetchTime);
-            var newConns = await dataManager.GetConnectionsAfterAsync(lastFetchTime);
+            var nodesTask = dataManager.GetNodesAfterAsync(lastFetchTime);
+            var connsTask = dataManager.GetConnectionsAfterAsync(lastFetchTime);
+            var scTask = dataManager.GetSubonnectionsAfterAsync(lastFetchTime);
+
+            await Task.WhenAll(nodesTask, connsTask, scTask);
+            var newNodes = nodesTask.Result;
+            var newConns = connsTask.Result;
+            var newSubs = scTask.Result;
 
             // check for any new zeek alerts
-            newNodes = await dataManager.FlagWeirdNodes(lastFetchTime, newNodes);
-            newNodes = await dataManager.FlagAlertedNodes(lastFetchTime, newNodes);
+            //newNodes = await dataManager.FlagWeirdNodes(lastFetchTime, newNodes);
+            //newNodes = await dataManager.FlagAlertedNodes(lastFetchTime, newNodes);
 
             // Update visuals for nodes that already exist (warning/alert flags may change)
             foreach (var n in newNodes)
@@ -873,14 +882,13 @@ private void UpdateExistingMacNodeVisuals(Node nodeData)
             }
 
             // 4) Process new Connections
-            var newSubs = new List<SubConnection>();
-            foreach (var conn in newConns)
-            {
-                // UPDATED: Use static helper
-                var parts = NetworkUtils.subdivideConnectionByProtocol(conn);
-                if (parts != null) newSubs.AddRange(parts);
-            }
-            SubConnectionList.AddRange(newSubs);
+            //foreach (var conn in newConns)
+            //{
+            //    // UPDATED: Use static helper
+            //    var parts = NetworkUtils.subdivideConnectionByProtocol(conn);
+            //    if (parts != null) newSubs.AddRange(parts);
+            //}
+            //SubConnectionList.AddRange(newSubs);
 
             // 5) Draw visual edges
             MakeMacTrafficConnectionsFor(newSubs);
