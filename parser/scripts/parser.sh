@@ -22,6 +22,13 @@ WEIRD_PY="$ZEEK2CH_DIR/zeek.py"
 ZEEK_WEIRD_LOG="../zeek/logs/weird.log"
 ZEEK_NOTICE_LOG="../zeek/logs/notice.log"
 
+# --- Load .env if it exists ---
+if [[ -f "${DOCKER_DIR}/.env" ]]; then
+    # This exports all variables in .env so the script and docker can see them
+    export $(grep -v '^#' "${DOCKER_DIR}/.env" | xargs)
+    echo "✅ Loaded configuration from ${DOCKER_DIR}/.env"
+fi
+
 # --- Helpers ---
 ask() {
   local prompt var default
@@ -96,6 +103,33 @@ run_zeek_import() {
   echo "Zeek weird.log import complete."
 }
 
+enable_promisc() {
+  local iface="$1"
+  # Check if PROMISC is already in the interface flags
+  if ip link show "$iface" | grep -q "PROMISC"; then
+    echo "✅ $iface is already in promiscuous mode."
+  else
+    echo "➡️  Enabling promiscuous mode on $iface..."
+    if ip link set "$iface" promisc on; then
+      echo "✅ Promiscuous mode enabled."
+    else
+      echo "❌ Error: Could not enable promiscuous mode on $iface."
+      exit 1
+    fi
+  fi
+}
+
+cleanup_promisc() {
+  local iface="${1:-}"
+  if [[ -n "$iface" ]]; then
+    echo "🧹 Cleaning up: Disabling promiscuous mode on $iface..."
+    sudo ip link set "$iface" promisc off
+    echo "✅ $iface returned to normal mode."
+  fi
+}
+
+trap 'cleanup_promisc "${IFACE:-${ZEEK_IFACE:-}}"' EXIT
+
 # --- Main Menu ---
 echo "========================================"
 echo "    NetVis Centralized Controller       "
@@ -121,10 +155,22 @@ if [[ "$MODE" == "1" ]]; then
         echo "❌ Error: Docker directory $DOCKER_DIR not found."
         exit 1
     fi
-    echo "➡️  Launching NetVis stack..."
-    (cd "$DOCKER_DIR" && docker compose up -d)
-    echo "Containers are starting. Database schema will be initialized automatically."
-    exit 0
+
+        # Detect the current default interface (e.g., enp195s0f0)
+        DETECTED_IFACE=$(get_default_nic)
+
+        echo -e "\n--- Interface Selection ---"
+        echo "Currently detected: $DETECTED_IFACE"
+        ask "Which interface should Zeek use (Ethernet/Wi-Fi)?" ZEEK_IFACE "$DETECTED_IFACE"
+
+        # Export this variable so docker-compose.yml can read it
+        export ZEEK_IFACE=$ZEEK_IFACE
+
+        echo "➡️  Launching NetVis stack on interface: $ZEEK_IFACE..."
+        (cd "$DOCKER_DIR" && docker compose up -d)
+
+        echo "Containers are starting. Use Option 2 next for live capture."
+        exit 0
 fi
 
 # --- DB Connection Inputs (For Options 2, 3, 4) ---
@@ -140,6 +186,7 @@ case "$MODE" in
     2) # Live Capture
         DEFAULT_IFACE=$(get_default_nic)
         ask "Live interface" IFACE "$DEFAULT_IFACE"
+        enable_promisc "$IFACE"
         require_binary
         export RUST_LOG="$RUST_LOG_LEVEL"
 
@@ -174,6 +221,8 @@ case "$MODE" in
         kill "$ZEEK_LOOP_PID" 2>/dev/null
 
         wait "$PARSER_PID" 2>/dev/null
+
+        cleanup_promisc "$IFACE"
         echo "Live capture stopped."
         ;;
 
