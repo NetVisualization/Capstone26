@@ -129,9 +129,9 @@ fi
 
 # --- DB Connection Inputs (For Options 2, 3, 4) ---
 echo -e "\n--- ClickHouse Connection ---"
-ask "ClickHouse Host"     CH_HOST     "localhost"
-ask "ClickHouse Port"     CH_PORT     "${CLICKHOUSE_PORT:-8123}"
-ask "ClickHouse User"     CH_USER     "capstone"
+ask "ClickHouse Host"     CH_HOST     "${CH_HOST:-localhost}"
+ask "ClickHouse Port"     CH_PORT     "${CH_PORT:-8123}"
+ask "ClickHouse User"     CH_USER     "${CH_USER:-capstone}"
 ask_secret "ClickHouse Password"      CH_PASSWORD
 CH_PASSWORD="${CH_PASSWORD:-boogle}"
 CH_URL="http://${CH_HOST}:${CH_PORT}"
