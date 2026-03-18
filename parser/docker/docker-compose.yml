@@ -48,7 +48,7 @@ services:
       - ../zeek/config/local.zeek:/usr/local/zeek/share/zeek/site/local.zeek:ro
       - ../zeek/config/scripts:/usr/local/zeek/share/zeek/site/scripts:ro
     # Change interface for user specific machine
-    command: zeek -C -i ens160 local
+    command: zeek -C -i ${ZEEK_IFACE:-eth0} local
 
 networks:
   netvis:
