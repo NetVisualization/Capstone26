@@ -10,6 +10,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using models;
 using System.Threading.Tasks;
+using Unity.VisualScripting;
 
 public class NodeSpawnerScript : MonoBehaviour
 {
@@ -166,8 +167,10 @@ public IReadOnlyDictionary<IPAddress, List<GameObject>> EdgesByIp => edgesByIp;
         Debug.Log($"{SubConnectionList.Count} sub-connections");
 
         // check for any new zeek alerts
-        nodeList = await dataManager.FlagWeirdNodes(initTime, nodeList);
-        nodeList = await dataManager.FlagAlertedNodes(initTime, nodeList);
+        var WeirdNodes = await dataManager.FlagWeirdNodes(initTime, nodeList);
+        nodeList = (List<Node>)nodeList.Concat(WeirdNodes).DistinctBy(n => n.mac).ToList();
+        var AlertNodes= await dataManager.FlagAlertedNodes(initTime, nodeList);
+        nodeList = (List<Node>)nodeList.Concat(AlertNodes).DistinctBy(n => n.mac).ToList();
 
         // 0) Build shared subnet order from ALL IPs we see (for alignment)
         subnetOrder = ComputeSubnetOrder();
@@ -842,18 +845,18 @@ private void UpdateExistingMacNodeVisuals(Node nodeData)
         try
         {
             // 1) Ask DB for anything newer than lastFetchTime (Async)
-            var nodesTask = dataManager.GetNodesAfterAsync(lastFetchTime);
-            var connsTask = dataManager.GetConnectionsAfterAsync(lastFetchTime);
-            var scTask = dataManager.GetSubonnectionsAfterAsync(lastFetchTime);
+            var newNodes = dataManager.GetNodesAfterAsync(lastFetchTime).Result;
+            var newConns = dataManager.GetConnectionsAfterAsync(lastFetchTime).Result;
+            var newSubs = dataManager.GetSubonnectionsAfterAsync(lastFetchTime).Result;
 
-            await Task.WhenAll(nodesTask, connsTask, scTask);
-            var newNodes = nodesTask.Result;
-            var newConns = connsTask.Result;
-            var newSubs = scTask.Result;
+            //await Task.WhenAll(nodesTask, connsTask, scTask);
+            //var newNodes = nodesTask.Result;
+            //var newConns = connsTask.Result;
+            //var newSubs = scTask.Result;
 
             // check for any new zeek alerts
-            //newNodes = await dataManager.FlagWeirdNodes(lastFetchTime, newNodes);
-            //newNodes = await dataManager.FlagAlertedNodes(lastFetchTime, newNodes);
+            //newNodes.AddRange(await dataManager.FlagWeirdNodes(lastFetchTime, newNodes));
+            //newNodes.AddRange(await dataManager.FlagAlertedNodes(lastFetchTime, newNodes));
 
             // Update visuals for nodes that already exist (warning/alert flags may change)
             foreach (var n in newNodes)
@@ -861,7 +864,7 @@ private void UpdateExistingMacNodeVisuals(Node nodeData)
                 UpdateExistingMacNodeVisuals(n);
             }
             
-            var warningIps = newNodes.Where(node => node.isWarning).SelectMany(node => node.ips);
+            //var warningIps = newNodes.Where(node => node.isWarning).SelectMany(node => node.ips);
 
 
             // 2) Update timestamps
@@ -888,7 +891,7 @@ private void UpdateExistingMacNodeVisuals(Node nodeData)
             //    var parts = NetworkUtils.subdivideConnectionByProtocol(conn);
             //    if (parts != null) newSubs.AddRange(parts);
             //}
-            //SubConnectionList.AddRange(newSubs);
+            SubConnectionList.AddRange(newSubs);
 
             // 5) Draw visual edges
             MakeMacTrafficConnectionsFor(newSubs);
