@@ -7,19 +7,21 @@ public class InfoPannelController : MonoBehaviour
     [SerializeField] private TextMeshProUGUI macValueText;
     [SerializeField] private TextMeshProUGUI packetsValueText;
     [SerializeField] private TextMeshProUGUI bytesValueText;
-    [SerializeField] private TextMeshProUGUI vendorValueText;
+
 
     [Header("Scrolling Value Fields")]
     [SerializeField] private TextMeshProUGUI ipValueText;
     [SerializeField] private TextMeshProUGUI portsValueText;
     [SerializeField] private TextMeshProUGUI layer7ValueText;
     [SerializeField] private TextMeshProUGUI alertsValueText;
+    [SerializeField] private TextMeshProUGUI vendorValueText;
 
     [Header("Scrolling Scripts")]
     [SerializeField] private AutoScrollTMP ipScroller;
     [SerializeField] private AutoScrollTMP portsScroller;
     [SerializeField] private AutoScrollTMP layer7Scroller;
     [SerializeField] private AutoScrollTMP alertsScroller;
+    [SerializeField] private AutoScrollTMP vendorScroller;
 
     public void setText(NodeInfo data)
     {
@@ -77,16 +79,18 @@ public class InfoPannelController : MonoBehaviour
         RestartScrollers();
     }
 
-    private void RestartScrollers()
-    {
-        if (ipValueText != null) ipValueText.ForceMeshUpdate();
-        if (portsValueText != null) portsValueText.ForceMeshUpdate();
-        if (layer7ValueText != null) layer7ValueText.ForceMeshUpdate();
-        if (alertsValueText != null) alertsValueText.ForceMeshUpdate();
+private void RestartScrollers()
+{
+    if (ipValueText != null) ipValueText.ForceMeshUpdate();
+    if (portsValueText != null) portsValueText.ForceMeshUpdate();
+    if (layer7ValueText != null) layer7ValueText.ForceMeshUpdate();
+    if (alertsValueText != null) alertsValueText.ForceMeshUpdate();
+    if (vendorValueText != null) vendorValueText.ForceMeshUpdate();
 
-        if (ipScroller != null) ipScroller.ResetToStart();
-        if (portsScroller != null) portsScroller.ResetToStart();
-        if (layer7Scroller != null) layer7Scroller.ResetToStart();
-        if (alertsScroller != null) alertsScroller.ResetToStart();
-    }
+    if (ipScroller != null) ipScroller.ResetToStart();
+    if (portsScroller != null) portsScroller.ResetToStart();
+    if (layer7Scroller != null) layer7Scroller.ResetToStart();
+    if (alertsScroller != null) alertsScroller.ResetToStart();
+    if (vendorScroller != null) vendorScroller.ResetToStart();
+}
 }
