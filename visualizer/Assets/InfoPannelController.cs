@@ -30,19 +30,13 @@ public class InfoPannelController : MonoBehaviour
         }
 
         var node = data.data;
-<<<<<<< HEAD
 
         string mac = node.mac != null ? node.mac.ToString() : "";
-        string ips = node.ips != null ? string.Join(", ", node.ips) : "";
+        string ips = node.ips != null ? NetworkUtils.GetStandardizedIPString(node.ips) : "";
         string srcPorts = node.src_ports != null ? string.Join(", ", node.src_ports) : "";
         string l7Protos = node.l7_protos != null ? string.Join(", ", node.l7_protos) : "";
         string alerts = node.alerts != null ? string.Join(", ", node.alerts) : "";
         string vendor = node.device_type != null ? node.device_type.ToString() : "";
-=======
-        string ips = NetworkUtils.GetStandardizedIPString(node.ips);
-        string src_ports = string.Join(", ", node.src_ports);
-        string l7_protos = string.Join(", ", node.l7_protos);
->>>>>>> 2fe4e3363b60daea8fcc8ac9cb59230c8cab65f5
 
         if (macValueText != null) macValueText.text = mac;
         if (packetsValueText != null) packetsValueText.text = node.pkts.ToString();
