@@ -25,7 +25,7 @@ public class VisIface : MonoBehaviour
 
     // expose data to visualize to other unity scripts
     public List<Node> LoadedNodes { get; private set; }
-    public List<Connection> LoadedConnections { get; private set; }
+    public List<SubConnection> LoadedSubConnections { get; private set; }
 
     /// <summary>
     /// Connect to the database when spawnerScript is ready
@@ -44,8 +44,8 @@ public class VisIface : MonoBehaviour
                 await _connection.connect(DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASS);
                 DateTime initialDT = new DateTime(1970, 01, 01, 00, 00, 00);
                 LoadedNodes = await GetNodesAfterAsync(initialDT);
-                LoadedConnections = await GetConnectionsAfterAsync(initialDT);
-                Debug.Log($"Loaded {LoadedNodes.Count} nodes and {LoadedConnections.Count} connections.");
+                LoadedSubConnections = await GetSubConnectionsAfterAsync(initialDT);
+                Debug.Log($"Loaded {LoadedNodes.Count} nodes and {LoadedSubConnections.Count} connections.");
             }
             catch (Exception ex)
             {
@@ -110,9 +110,8 @@ public class VisIface : MonoBehaviour
         return nodes;
     }
 
-    /// <summary>
-    /// Get all connections from the database after a certain time
-    /// </summary>
+    /// <summary> WARNING: this function is currently deprecated and being replaced
+    /// with GetSubConnectionsAfterAsync; please don't add any features using it </summary>
     public async Task<List<Connection>> GetConnectionsAfterAsync(DateTime time)
     {
         string sql = @"

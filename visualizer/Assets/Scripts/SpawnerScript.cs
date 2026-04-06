@@ -96,7 +96,6 @@ public IReadOnlyDictionary<IPAddress, List<GameObject>> EdgesByIp => edgesByIp;
 
 
     List<Node> nodeList = new();
-    List<Connection> ConnectionList = new();
     List<SubConnection> SubConnectionList = new();
 
     List<GameObject> spawnedMacNodes = new(); // MAC layer nodes
@@ -149,21 +148,13 @@ public IReadOnlyDictionary<IPAddress, List<GameObject>> EdgesByIp => edgesByIp;
         // use WhenAll method to fetch in parallel for performance
         DateTime initTime = new DateTime(1970, 01, 01, 00, 00, 00);
         var nodesTask =  dataManager.GetNodesAfterAsync(initTime);
-        var connsTask = dataManager.GetConnectionsAfterAsync(initTime);
         var scTask = dataManager.GetSubConnectionsAfterAsync(initTime);
-        await Task.WhenAll(nodesTask, connsTask, scTask);
+        await Task.WhenAll(nodesTask, scTask);
         nodeList = nodesTask.Result;
-        ConnectionList = connsTask.Result;
         SubConnectionList = scTask.Result;
 
-        //foreach (var conn in ConnectionList)
-        //{
-        //    var parts = NetworkUtils.subdivideConnectionByProtocol(conn);
-        //    if (parts != null) SubConnectionList.AddRange(parts);
-        //}
         lastRender = DateTime.Now;
 
-        Debug.Log($"{ConnectionList.Count} connections");
         Debug.Log($"{SubConnectionList.Count} sub-connections");
 
         // check for any new zeek alerts
@@ -850,15 +841,13 @@ private void UpdateExistingMacNodeVisuals(Node nodeData)
         {
             // 1) Ask DB for anything newer than lastFetchTime (Async)
             var nodesTask = dataManager.GetNodesAfterAsync(lastFetchTime);
-            var connsTask = dataManager.GetConnectionsAfterAsync(lastFetchTime);
             var scTask = dataManager.GetSubConnectionsAfterAsync(lastFetchTime);
 
-            await Task.WhenAll(nodesTask, connsTask, scTask);
+            await Task.WhenAll(nodesTask, scTask);
             var newNodes = nodesTask.Result;
-            var newConns = connsTask.Result;
             var newSubs = scTask.Result;
 
-            // Update visuals for nodes that already exist (warning/alert flags may change)
+            // 2) Update visuals for nodes that already exist (warning/alert flags may change)
             foreach (var n in newNodes)
             {
                 nodeList.Add(n);
@@ -875,7 +864,7 @@ private void UpdateExistingMacNodeVisuals(Node nodeData)
                 }
             }
 
-            // check for any new zeek alerts
+            // 3) check for any new zeek alerts
             var WeirdNodes = await dataManager.FlagWeirdNodes(lastFetchTime, nodeList);
             var AlertNodes = await dataManager.FlagAlertedNodes(lastFetchTime, nodeList);
             var flaggedNodes = WeirdNodes.Concat(AlertNodes).DistinctBy(n => n.mac);
@@ -884,53 +873,20 @@ private void UpdateExistingMacNodeVisuals(Node nodeData)
                 UpdateExistingMacNodeVisuals(n);
             }
 
-            //var warningIps = newNodes.Where(node => node.isWarning).SelectMany(node => node.ips);
-
-
-            // 2) Update timestamps
+            // 4) Update timestamps
             DateTime maxTs = lastFetchTime;
             foreach (var n in newNodes)
                 if (n.first_seen > maxTs) maxTs = n.first_seen;
-            foreach (var c in newConns)
-                if (c.first_seen > maxTs) maxTs = c.first_seen;
             foreach (var s in newSubs)
                 if (s.first_seen > maxTs) maxTs = s.first_seen;
 
             if (maxTs > lastFetchTime)
                 lastFetchTime = maxTs;
 
-            // 3) Spawn new Nodes
-            //foreach (var n in newNodes)
-            //{
-            //    nodeList.Add(n);
-            //    SpawnMacNodeIfNeeded(n);
-            //}
-
-            // 4) Process new Connections
-            //var newSubs = new List<SubConnection>();
-            //foreach (var conn in newConns)
-            //{
-            //    // UPDATED: Use static helper
-            //    var parts = NetworkUtils.subdivideConnectionByProtocol(conn);
-            //    if (parts != null) newSubs.AddRange(parts);
-            //}
-            SubConnectionList.AddRange(newSubs);
-
             // 5) Draw visual edges
+            SubConnectionList.AddRange(newSubs);
             MakeMacTrafficConnectionsFor(newSubs);
 
-            // 6) Update IP mappings
-            //foreach (var n in newNodes)
-            //{
-            //    GameObject macGO = FindNodeByMac(n.mac);
-            //    if (macGO == null || n.ips == null) continue;
-
-            //    foreach (var ip in n.ips)
-            //    {
-            //        var ipGO = CreateOrGetIpNode(ip);
-            //        CreateMacIpEdge(macGO, ipGO, n.mac, ip);
-            //    }
-            //}
         }
         catch (Exception ex)
         {

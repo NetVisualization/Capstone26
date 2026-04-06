@@ -8,6 +8,8 @@ namespace models
 {
     // Database Connection Object (Get)
     [Serializable]
+    /// <summary> WARNING: this model is currently deprecated and replaced
+    /// with subconnectins, please don't add any features using it </summary>
     public struct Connection
     {
         public List<IPAddress> node_a;
