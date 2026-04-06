@@ -166,6 +166,13 @@ if [[ "$MODE" == "1" ]]; then
         # Export this variable so docker-compose.yml can read it
         export ZEEK_IFACE=$ZEEK_IFACE
 
+        # check if docker container already exsists
+        RUNNING_CONTAINERS=$(docker ps -a --format '{{.Names}}')
+        if $(echo "$RUNNING_CONTAINERS" | grep -q "clickhouse") || $(echo "$RUNNING_CONTAINERS" | grep -q "zeek"); then
+            echo "⚠️  Docker containers already exist. Removing to ensure updates are applied..."
+            (cd "$DOCKER_DIR" && docker compose down -v)
+        fi
+
         echo "➡️  Launching NetVis stack on interface: $ZEEK_IFACE..."
         (cd "$DOCKER_DIR" && docker compose up -d)
 
