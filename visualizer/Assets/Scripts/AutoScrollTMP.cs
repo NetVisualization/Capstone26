@@ -1,7 +1,7 @@
 using TMPro;
 using UnityEngine;
 
-public class AutoScrollHorizontalTMP : MonoBehaviour
+public class AutoScrollTMP : MonoBehaviour
 {
     [SerializeField] private RectTransform textRect;
     [SerializeField] private RectTransform viewportRect;

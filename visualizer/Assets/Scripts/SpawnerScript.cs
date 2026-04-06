@@ -125,6 +125,12 @@ public IReadOnlyDictionary<IPAddress, List<GameObject>> EdgesByIp => edgesByIp;
     // ---------------------------------------------------------------------
     // Unity lifecycle
     // ---------------------------------------------------------------------
+    private void Awake()
+    {
+    if (filterSystem == null)
+        filterSystem = FindFirstObjectByType<FilterSystem>();
+    }
+   
     async void Start()
     {
         // --- DB pulls ---
@@ -192,6 +198,12 @@ public IReadOnlyDictionary<IPAddress, List<GameObject>> EdgesByIp => edgesByIp;
         MakeMacIpMappingEdgesCurved();
 
         lastFetchTime = DateTime.UtcNow.AddSeconds(-5);
+
+        //  Apply default filters AFTER everything is spawned
+        if (filterSystem != null)
+        {
+            filterSystem.ApplyDefaultFilters();
+        }
     }
     // ---------------------------------------------------------------------
     //  Update only for live traffic
@@ -466,6 +478,7 @@ public IReadOnlyDictionary<IPAddress, List<GameObject>> EdgesByIp => edgesByIp;
                     tag.protocol = l7_proto.UNKNOWN;
 
                     spawnedConnections.Add(edge);
+                    RegisterEdge(edge, tag);
                     ConnectStraight(edge.transform, macGO.transform, ipGO.transform, ConnectionMed);
                 }
             }
@@ -791,9 +804,14 @@ private void UpdateExistingMacNodeVisuals(Node nodeData)
         if (tag.ip != null)
         {
             string ipKey = tag.ip.ToString();
+
             if (!edgesByIp.TryGetValue(tag.ip, out var listI))
                 edgesByIp[tag.ip] = listI = new List<GameObject>();
             listI.Add(edge);
+
+            if (!edgesByIpString.TryGetValue(ipKey, out var listS))
+                edgesByIpString[ipKey] = listS = new List<GameObject>();
+            listS.Add(edge);
         }
     }
 }
@@ -887,6 +905,11 @@ private void UpdateExistingMacNodeVisuals(Node nodeData)
             SubConnectionList.AddRange(newSubs);
             MakeMacTrafficConnectionsFor(newSubs);
 
+            // 6) apply filter to newly drawn nodes/edges
+            if (filterSystem != null)
+            {
+                filterSystem.ApplyDefaultFilters();
+            }
         }
         catch (Exception ex)
         {
@@ -911,6 +934,8 @@ private void UpdateExistingMacNodeVisuals(Node nodeData)
             tag.ip = ip;
             tag.protocol = l7_proto.UNKNOWN;
 
+            RegisterEdge(edge, tag);
+
             var lr = edge.GetComponent<LineRenderer>();
             ApplyEdgeMaterial(lr, ConnectionMed);
             SetQuadraticCurve(lr, macGO.transform.position, ipGO.transform.position, 0.35f, 20);
@@ -925,6 +950,7 @@ private void UpdateExistingMacNodeVisuals(Node nodeData)
             tag.protocol = l7_proto.UNKNOWN;
 
             spawnedConnections.Add(edge);
+            RegisterEdge(edge, tag);
             ConnectStraight(edge.transform, macGO.transform, ipGO.transform, ConnectionMed);
         }
     }
@@ -995,7 +1021,11 @@ private void UpdateExistingMacNodeVisuals(Node nodeData)
 
             spawnedConnections.Add(edge);
             RegisterEdge(edge, tag);
+<<<<<<< visualizer/Assets/Scripts/SpawnerScript.cs
             spawnedConnectionObjects[key] = edge;
+=======
+            ConnectStraight(edge.transform, a.transform, b.transform, null);
+>>>>>>> visualizer/Assets/Scripts/SpawnerScript.cs
 
             var rend = edge.GetComponentInChildren<Renderer>();
             SetRendererColor(rend, GetColorForProtocol(sc.protocol));

@@ -1,4 +1,6 @@
 using System;
+using System.Net;
+using System.Net.Sockets;
 using UnityEngine;
 using models; // l7_proto
 
@@ -6,9 +8,11 @@ public class FilterSystem : MonoBehaviour
 {
     [SerializeField] private NodeSpawnerScript spawner;
 
-    // Track state so live traffic can be applied correctly later if you want
     private readonly System.Collections.Generic.HashSet<l7_proto> hiddenProtocols = new();
+
     private bool macIpHidden = false;
+    private bool ipv6NoiseHidden = true;   // hidden by default
+    private bool noisyMacHidden = true;    // hidden by default
 
     private void Awake()
     {
@@ -16,23 +20,39 @@ public class FilterSystem : MonoBehaviour
             spawner = FindFirstObjectByType<NodeSpawnerScript>();
     }
 
-    // ✅ Call THIS from FilterButtonVisual:
-    // filterKey: "SSH", "DNS", ... or "MACIP"
+    private void Start()
+    {
+        if (spawner == null) return;
+        ApplyDefaultFilters();
+    }
+
+    // filterKey: "SSH", "DNS", ... or "MACIP" or "IPV6NOISE" or "NOISYMAC"
     // filterOn: true means "hide that thing"
     public void SetFilterState(string filterKey, bool filterOn)
     {
         if (spawner == null) return;
 
-        // Special case: vertical edges (MAC <-> IP)
         if (filterKey.Equals("MACIP", StringComparison.OrdinalIgnoreCase))
         {
             macIpHidden = filterOn;
-            SetMacIpEdgesVisible(!macIpHidden);   // visible = !hidden
-            RefreshNodeVisibility();
+            ReapplyAllFilters();
             return;
         }
 
-        // Otherwise treat as protocol
+        if (filterKey.Equals("IPV6NOISE", StringComparison.OrdinalIgnoreCase))
+        {
+            ipv6NoiseHidden = filterOn;
+            ReapplyAllFilters();
+            return;
+        }
+
+        if (filterKey.Equals("NOISYMAC", StringComparison.OrdinalIgnoreCase))
+        {
+            noisyMacHidden = filterOn;
+            ReapplyAllFilters();
+            return;
+        }
+
         if (!Enum.TryParse(filterKey, ignoreCase: true, out l7_proto proto))
         {
             Debug.LogWarning($"Filter key '{filterKey}' doesn't match l7_proto enum.");
@@ -42,34 +62,162 @@ public class FilterSystem : MonoBehaviour
         if (filterOn) hiddenProtocols.Add(proto);
         else hiddenProtocols.Remove(proto);
 
-        SetProtocolEdgesVisible(proto, visible: !filterOn); // visible = !hidden
-        RefreshNodeVisibility();
+        ReapplyAllFilters();
     }
 
-    private void SetProtocolEdgesVisible(l7_proto proto, bool visible)
+    private void ReapplyAllFilters()
     {
+        if (spawner == null) return;
+
+        // ----- EDGES -----
         foreach (var edge in spawner.Connections)
         {
             if (!edge) continue;
+            edge.SetActive(ShouldEdgeBeVisible(edge));
+        }
 
-            var tag = edge.GetComponent<EdgeTag>();
-            if (tag == null) continue;
+        // ----- MAC NODES -----
+        foreach (var kv in spawner.MacNodes)
+        {
+            string mac = kv.Key;
+            var nodeGO = kv.Value;
+            if (!nodeGO) continue;
 
-            if (tag.isMacMac && tag.protocol == proto)
-                edge.SetActive(visible);
+            if (noisyMacHidden && IsNoisyMac(mac))
+            {
+                nodeGO.SetActive(false);
+                continue;
+            }
+
+            bool anyActive = false;
+            if (spawner.EdgesByMac.TryGetValue(mac, out var edges) && edges != null)
+            {
+                for (int i = 0; i < edges.Count; i++)
+                {
+                    var e = edges[i];
+                    if (e && e.activeSelf)
+                    {
+                        anyActive = true;
+                        break;
+                    }
+                }
+            }
+
+            nodeGO.SetActive(anyActive);
+        }
+
+        // ----- IP NODES -----
+        foreach (var ipGO in spawner.IpNodeList)
+        {
+            if (!ipGO) continue;
+
+            var ipTag = ipGO.GetComponent<IpTag>();
+            if (ipTag == null || string.IsNullOrWhiteSpace(ipTag.ipString))
+            {
+                ipGO.SetActive(false);
+                continue;
+            }
+
+            if (IPAddress.TryParse(ipTag.ipString, out var ip))
+            {
+                if (ipv6NoiseHidden && IsIPv6Noise(ip))
+                {
+                    ipGO.SetActive(false);
+                    continue;
+                }
+            }
+
+            if (!spawner.EdgesByIpString.TryGetValue(ipTag.ipString, out var edges) || edges == null)
+            {
+                ipGO.SetActive(false);
+                continue;
+            }
+
+            bool anyActive = false;
+            for (int i = 0; i < edges.Count; i++)
+            {
+                var e = edges[i];
+                if (e && e.activeSelf)
+                {
+                    anyActive = true;
+                    break;
+                }
+            }
+
+            ipGO.SetActive(anyActive);
         }
     }
 
-    public void SetMacIpEdgesVisible(bool visible)
+    private bool ShouldEdgeBeVisible(GameObject edge)
     {
-        foreach (var edge in spawner.Connections)
-        {
-            if (!edge) continue;
+        if (!edge) return false;
 
-            var tag = edge.GetComponent<EdgeTag>();
-            if (tag != null && tag.isMacIp)
-                edge.SetActive(visible);
+        var tag = edge.GetComponent<EdgeTag>();
+        if (tag == null) return true;
+
+        // Hide MAC<->IP edges if MACIP filter says so
+        if (tag.isMacIp && macIpHidden)
+            return false;
+
+        // Hide protocol-specific MAC<->MAC edges
+        if (tag.isMacMac && hiddenProtocols.Contains(tag.protocol))
+            return false;
+
+        // Hide noisy MAC edges
+        if (noisyMacHidden)
+        {
+            if (!string.IsNullOrWhiteSpace(tag.mac_a) && IsNoisyMac(tag.mac_a))
+                return false;
+
+            if (!string.IsNullOrWhiteSpace(tag.mac_b) && IsNoisyMac(tag.mac_b))
+                return false;
         }
+
+        // Hide IPv6 multicast/link-local IP edges
+        if (ipv6NoiseHidden && tag.ip != null && IsIPv6Noise(tag.ip))
+            return false;
+
+        return true;
+    }
+
+    private bool IsIPv6Noise(IPAddress ip)
+    {
+        if (ip == null || ip.AddressFamily != AddressFamily.InterNetworkV6)
+            return false;
+
+        byte[] bytes = ip.GetAddressBytes();
+
+        // Multicast: ff00::/8
+        if (bytes[0] == 0xFF)
+            return true;
+
+        // Link-local: fe80::/10
+        if (bytes[0] == 0xFE && (bytes[1] & 0xC0) == 0x80)
+            return true;
+
+        return false;
+    }
+
+    private bool IsNoisyMac(string macString)
+    {
+        if (string.IsNullOrWhiteSpace(macString))
+            return false;
+
+        string m = macString.Replace(":", "").Replace("-", "").Trim().ToUpperInvariant();
+
+        // Broadcast
+        if (m == "FFFFFFFFFFFF")
+            return true;
+
+        // IPv6 multicast MAC 33:33:xx:xx:xx:xx
+        if (m.StartsWith("3333"))
+            return true;
+
+        // IPv4 multicast MAC 01:00:5E:xx:xx:xx
+        if (m.StartsWith("01005E"))
+            return true;
+
+        return false;
     }
 
     public void HideAllConnections()
@@ -79,73 +227,29 @@ public class FilterSystem : MonoBehaviour
 
         hiddenProtocols.Clear();
         macIpHidden = true;
+        ipv6NoiseHidden = true;
+        noisyMacHidden = true;
 
-        RefreshNodeVisibility();
+        ReapplyAllFilters();
     }
 
     public void ShowAllConnections()
     {
-        foreach (var c in spawner.Connections)
-            if (c) c.SetActive(true);
-
         hiddenProtocols.Clear();
         macIpHidden = false;
+        ipv6NoiseHidden = false;
+        noisyMacHidden = false;
 
-        RefreshNodeVisibility();
+        ReapplyAllFilters();
     }
 
-    // Same as your current version (MAC nodes hide if no active edges)
     public void RefreshNodeVisibility()
     {
-        if (spawner == null) return;
-
-        foreach (var kv in spawner.MacNodes)
-        {
-            string mac = kv.Key;
-            var nodeGO = kv.Value;
-            if (!nodeGO) continue;
-
-            bool anyActive = false;
-            if (spawner.EdgesByMac.TryGetValue(mac, out var edges))
-            {
-                for (int i = 0; i < edges.Count; i++)
-                {
-                    var e = edges[i];
-                    if (e && e.activeSelf) { anyActive = true; break; }
-                }
-            }
-
-            nodeGO.SetActive(anyActive);
-        }
-
-        // keep IP nodes on (or later you can hide them similarly)
-        foreach (var ipGO in spawner.IpNodeList)
-{
-    if (!ipGO) continue;
-
-    var ipTag = ipGO.GetComponent<IpTag>();
-    if (ipTag == null || string.IsNullOrEmpty(ipTag.ipString))
-    {
-        ipGO.SetActive(true);
-        continue;
+        ReapplyAllFilters();
     }
 
-    // ✅ If the spawner doesn't have an edge list for this IP yet,
-    // keep it visible (prevents "all IP nodes disappear" bug)
-    if (!spawner.EdgesByIpString.TryGetValue(ipTag.ipString, out var edges) || edges == null)
+    public void ApplyDefaultFilters()
     {
-        ipGO.SetActive(true);
-        continue;
-    }
-
-    bool anyActive = false;
-    for (int i = 0; i < edges.Count; i++)
-    {
-        var e = edges[i];
-        if (e && e.activeSelf) { anyActive = true; break; }
-    }
-
-    ipGO.SetActive(anyActive);
-}
+        ReapplyAllFilters();
     }
 }

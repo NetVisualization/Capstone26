@@ -1,14 +1,27 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using TMPro;
 using UnityEngine;
 
 public class InfoPannelController : MonoBehaviour
 {
-    [Header("UI References")]
-    [SerializeField] private TextMeshProUGUI infoText;
+    [Header("Static Value Fields")]
+    [SerializeField] private TextMeshProUGUI macValueText;
+    [SerializeField] private TextMeshProUGUI packetsValueText;
+    [SerializeField] private TextMeshProUGUI bytesValueText;
 
+
+    [Header("Scrolling Value Fields")]
+    [SerializeField] private TextMeshProUGUI ipValueText;
+    [SerializeField] private TextMeshProUGUI portsValueText;
+    [SerializeField] private TextMeshProUGUI layer7ValueText;
+    [SerializeField] private TextMeshProUGUI alertsValueText;
+    [SerializeField] private TextMeshProUGUI vendorValueText;
+
+    [Header("Scrolling Scripts")]
+    [SerializeField] private AutoScrollTMP ipScroller;
+    [SerializeField] private AutoScrollTMP portsScroller;
+    [SerializeField] private AutoScrollTMP layer7Scroller;
+    [SerializeField] private AutoScrollTMP alertsScroller;
+    [SerializeField] private AutoScrollTMP vendorScroller;
 
     public void setText(NodeInfo data)
     {
@@ -19,24 +32,25 @@ public class InfoPannelController : MonoBehaviour
         }
 
         var node = data.data;
-        string ips = NetworkUtils.GetStandardizedIPString(node.ips);
-        string src_ports = string.Join(", ", node.src_ports);
-        string l7_protos = string.Join(", ", node.l7_protos);
 
-        infoText.text =
-            $"<b>Mac Address:</b> {node.mac}\n" +
-            $"<b># packets:</b> {node.pkts}\n" +
-            $"<b># Bytes:</b> {node.bytes}\n" +
-            $"<b>First Seen:</b> {node.first_seen}\n" +
-            $"<b>Last Seen:</b> {node.last_seen}\n" +
-            $"<b>Degree:</b> {node.degree}\n" +
-            $"<b>IP Address:</b> {ips}\n" +
-            $"<b>Source Ports:</b> {src_ports}\n" +
-            $"<b>Layer 7:</b> {l7_protos}\n" +
-            $"<b>Vendor:</b> {node.device_type}\n" +
-            $"<b>Alerts:</b> {node.alerts}\n";
+        string mac = node.mac != null ? node.mac.ToString() : "";
+        string ips = node.ips != null ? NetworkUtils.GetStandardizedIPString(node.ips) : "";
+        string srcPorts = node.src_ports != null ? string.Join(", ", node.src_ports) : "";
+        string l7Protos = node.l7_protos != null ? string.Join(", ", node.l7_protos) : "";
+        string alerts = node.alerts != null ? string.Join(", ", node.alerts) : "";
+        string vendor = node.device_type != null ? node.device_type.ToString() : "";
 
-        RestartScroll();
+        if (macValueText != null) macValueText.text = mac;
+        if (packetsValueText != null) packetsValueText.text = node.pkts.ToString();
+        if (bytesValueText != null) bytesValueText.text = node.bytes.ToString();
+        if (vendorValueText != null) vendorValueText.text = vendor;
+
+        if (ipValueText != null) ipValueText.text = ips;
+        if (portsValueText != null) portsValueText.text = srcPorts;
+        if (layer7ValueText != null) layer7ValueText.text = l7Protos;
+        if (alertsValueText != null) alertsValueText.text = alerts;
+
+        RestartScrollers();
     }
 
     public void setText(ConnectionInfo data)
@@ -49,21 +63,34 @@ public class InfoPannelController : MonoBehaviour
 
         var node = data.data;
 
-        infoText.text =
-            $"Mac Address 1: {node.node_a_macs}    " +
-            $"Mac Address 2: {node.node_b_macs}    " +
-            $"Packets: {node.pkts}    " +
-            $"Bytes: {node.bytes}";
+        string mac1 = node.node_a_macs != null ? node.node_a_macs.ToString() : "";
+        string mac2 = node.node_b_macs != null ? node.node_b_macs.ToString() : "";
 
-        RestartScroll();
+        if (macValueText != null) macValueText.text = $"{mac1}  <->  {mac2}";
+        if (packetsValueText != null) packetsValueText.text = node.pkts.ToString();
+        if (bytesValueText != null) bytesValueText.text = node.bytes.ToString();
+        if (vendorValueText != null) vendorValueText.text = "";
+
+        if (ipValueText != null) ipValueText.text = "";
+        if (portsValueText != null) portsValueText.text = "";
+        if (layer7ValueText != null) layer7ValueText.text = "";
+        if (alertsValueText != null) alertsValueText.text = "";
+
+        RestartScrollers();
     }
 
-    private void RestartScroll()
-    {
-        if (infoText != null)
-            infoText.ForceMeshUpdate();
+private void RestartScrollers()
+{
+    if (ipValueText != null) ipValueText.ForceMeshUpdate();
+    if (portsValueText != null) portsValueText.ForceMeshUpdate();
+    if (layer7ValueText != null) layer7ValueText.ForceMeshUpdate();
+    if (alertsValueText != null) alertsValueText.ForceMeshUpdate();
+    if (vendorValueText != null) vendorValueText.ForceMeshUpdate();
 
-        //if (autoScroll != null)
-        //    autoScroll.ResetToStart();
-    }
+    if (ipScroller != null) ipScroller.ResetToStart();
+    if (portsScroller != null) portsScroller.ResetToStart();
+    if (layer7Scroller != null) layer7Scroller.ResetToStart();
+    if (alertsScroller != null) alertsScroller.ResetToStart();
+    if (vendorScroller != null) vendorScroller.ResetToStart();
+}
 }
