@@ -113,7 +113,8 @@ public IReadOnlyDictionary<IPAddress, List<GameObject>> EdgesByIp => edgesByIp;
     GameObject routerMacGO = null;
 
     // One string per connection, e.g. "MACA|MACB|PROTO"
-    private HashSet<string> spawnedConnectionKeys = new();
+    //private HashSet<string> spawnedConnectionKeys = new();
+    private Dictionary<string, GameObject> spawnedConnectionObjects = new();
 
     // For polling
     public float refreshInterval = 2f;  // seconds between DB polls
@@ -333,6 +334,10 @@ public IReadOnlyDictionary<IPAddress, List<GameObject>> EdgesByIp => edgesByIp;
             for (int i = 0; i < count; i++)
             {
                 var sc = list[i];
+
+                // prevent duplication
+                string key = ConnectionKey(sc);
+                if (spawnedConnectionObjects.ContainsKey(key)) continue;
 
                 GameObject a = FindNodeByMac(sc.node_a_macs);
                 GameObject b = FindNodeByMac(sc.node_b_macs);
@@ -853,18 +858,33 @@ private void UpdateExistingMacNodeVisuals(Node nodeData)
             var newConns = connsTask.Result;
             var newSubs = scTask.Result;
 
-
-            // check for any new zeek alerts
-            //newNodes = await dataManager.FlagWeirdNodes(lastFetchTime, newNodes);
-            //newNodes = await dataManager.FlagAlertedNodes(lastFetchTime, newNodes);
-
             // Update visuals for nodes that already exist (warning/alert flags may change)
             foreach (var n in newNodes)
-            {       
+            {
+                nodeList.Add(n);
+                SpawnMacNodeIfNeeded(n);
+
+                GameObject macGO = FindNodeByMac(n.mac);
+                if (macGO != null && n.ips != null)
+                {
+                    foreach (var ip in n.ips)
+                    {
+                        var ipGO = CreateOrGetIpNode(ip);
+                        CreateMacIpEdge(macGO, ipGO, n.mac, ip);
+                    }
+                }
+            }
+
+            // check for any new zeek alerts
+            var WeirdNodes = await dataManager.FlagWeirdNodes(lastFetchTime, nodeList);
+            var AlertNodes = await dataManager.FlagAlertedNodes(lastFetchTime, nodeList);
+            var flaggedNodes = WeirdNodes.Concat(AlertNodes).DistinctBy(n => n.mac);
+            foreach (var n in flaggedNodes)
+            {
                 UpdateExistingMacNodeVisuals(n);
             }
-            
-            var warningIps = newNodes.Where(node => node.isWarning).SelectMany(node => node.ips);
+
+            //var warningIps = newNodes.Where(node => node.isWarning).SelectMany(node => node.ips);
 
 
             // 2) Update timestamps
@@ -873,16 +893,18 @@ private void UpdateExistingMacNodeVisuals(Node nodeData)
                 if (n.first_seen > maxTs) maxTs = n.first_seen;
             foreach (var c in newConns)
                 if (c.first_seen > maxTs) maxTs = c.first_seen;
+            foreach (var s in newSubs)
+                if (s.first_seen > maxTs) maxTs = s.first_seen;
 
             if (maxTs > lastFetchTime)
                 lastFetchTime = maxTs;
 
             // 3) Spawn new Nodes
-            foreach (var n in newNodes)
-            {
-                nodeList.Add(n);
-                SpawnMacNodeIfNeeded(n);
-            }
+            //foreach (var n in newNodes)
+            //{
+            //    nodeList.Add(n);
+            //    SpawnMacNodeIfNeeded(n);
+            //}
 
             // 4) Process new Connections
             //var newSubs = new List<SubConnection>();
@@ -898,17 +920,17 @@ private void UpdateExistingMacNodeVisuals(Node nodeData)
             MakeMacTrafficConnectionsFor(newSubs);
 
             // 6) Update IP mappings
-            foreach (var n in newNodes)
-            {
-                GameObject macGO = FindNodeByMac(n.mac);
-                if (macGO == null || n.ips == null) continue;
+            //foreach (var n in newNodes)
+            //{
+            //    GameObject macGO = FindNodeByMac(n.mac);
+            //    if (macGO == null || n.ips == null) continue;
 
-                foreach (var ip in n.ips)
-                {
-                    var ipGO = CreateOrGetIpNode(ip);
-                    CreateMacIpEdge(macGO, ipGO, n.mac, ip);
-                }
-            }
+            //    foreach (var ip in n.ips)
+            //    {
+            //        var ipGO = CreateOrGetIpNode(ip);
+            //        CreateMacIpEdge(macGO, ipGO, n.mac, ip);
+            //    }
+            //}
         }
         catch (Exception ex)
         {
@@ -983,22 +1005,30 @@ private void UpdateExistingMacNodeVisuals(Node nodeData)
     // make any connections for the new nodes created
     void MakeMacTrafficConnectionsFor(IEnumerable<SubConnection> subs)
     {
+        var layoutRequiresUpdate = new HashSet<string>();
         foreach (var sc in subs)
         {
             // Skip if we've already drawn this MAC-pair+protocol
             string key = ConnectionKey(sc);
-            if (!spawnedConnectionKeys.Add(key))
+            if (spawnedConnectionObjects.TryGetValue(key, out GameObject existingEdge))
+            {
+                var connInfo = existingEdge.GetComponent<ConnectionInfo>();
+                if (connInfo != null)
+                {
+                    connInfo.Initialize(sc);
+                }
                 continue;
+            }
 
             GameObject a = FindNodeByMac(sc.node_a_macs);
             GameObject b = FindNodeByMac(sc.node_b_macs);
             if (a == null || b == null) continue;
 
             GameObject edge = Instantiate(connectionPrefab);
-            var connInfo = edge.GetComponent<ConnectionInfo>();
-            if (connInfo != null)
+            var connInfoNew = edge.GetComponent<ConnectionInfo>();
+            if (connInfoNew != null)
             {
-                connInfo.Initialize(sc);
+                connInfoNew.Initialize(sc);
             }
 
             var tag = edge.AddComponent<EdgeTag>();
@@ -1008,11 +1038,42 @@ private void UpdateExistingMacNodeVisuals(Node nodeData)
             tag.protocol = sc.protocol;
 
             spawnedConnections.Add(edge);
-
-            ConnectStraight(edge.transform, a.transform, b.transform, null);
+            RegisterEdge(edge, tag);
+            spawnedConnectionObjects[key] = edge;
 
             var rend = edge.GetComponentInChildren<Renderer>();
             SetRendererColor(rend, GetColorForProtocol(sc.protocol));
+
+            layoutRequiresUpdate.Add(EdgeKey(sc.node_a_macs, sc.node_b_macs));
+        }
+
+        // Apply updated offsets to all lines between affected MAC pairs
+        foreach (var pairKey in layoutRequiresUpdate)
+        {
+            RecalculateEdgeOffsetsForPair(pairKey);
+        }
+    }
+
+    void RecalculateEdgeOffsetsForPair(string pairKey)
+    {
+        var parts = pairKey.Split('|');
+        if (parts.Length != 2) return;
+
+        string macA = parts[0];
+        string macB = parts[1];
+
+        GameObject nodeA = NodeObjects.GetValueOrDefault(macA);
+        GameObject nodeB = NodeObjects.GetValueOrDefault(macB);
+        if (nodeA == null || nodeB == null) return;
+
+        if (!EdgesByMac.TryGetValue(macA, out var edgesA) || !EdgesByMac.TryGetValue(macB, out var edgesB)) return;
+
+        var sharedEdges = edgesA.Intersect(edgesB).Where(e => e.GetComponent<EdgeTag>().isMacMac).ToList();
+        int count = sharedEdges.Count;
+
+        for (int i = 0; i < count; i++)
+        {
+            ConnectStraight(sharedEdges[i].transform, nodeA.transform, nodeB.transform, null, i, count);
         }
     }
 
