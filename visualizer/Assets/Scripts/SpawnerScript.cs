@@ -1021,11 +1021,7 @@ private void UpdateExistingMacNodeVisuals(Node nodeData)
 
             spawnedConnections.Add(edge);
             RegisterEdge(edge, tag);
-<<<<<<< visualizer/Assets/Scripts/SpawnerScript.cs
             spawnedConnectionObjects[key] = edge;
-=======
-            ConnectStraight(edge.transform, a.transform, b.transform, null);
->>>>>>> visualizer/Assets/Scripts/SpawnerScript.cs
 
             var rend = edge.GetComponentInChildren<Renderer>();
             SetRendererColor(rend, GetColorForProtocol(sc.protocol));
