@@ -63,7 +63,7 @@ public class InfoPannelController : MonoBehaviour
         if (infoText != null)
             infoText.ForceMeshUpdate();
 
-        if (autoScroll != null)
-            autoScroll.ResetToStart();
+        //if (autoScroll != null)
+        //    autoScroll.ResetToStart();
     }
 }

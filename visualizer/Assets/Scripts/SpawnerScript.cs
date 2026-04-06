@@ -150,7 +150,6 @@ public IReadOnlyDictionary<IPAddress, List<GameObject>> EdgesByIp => edgesByIp;
         var nodesTask =  dataManager.GetNodesAfterAsync(initTime);
         var connsTask = dataManager.GetConnectionsAfterAsync(initTime);
         var scTask = dataManager.GetSubonnectionsAfterAsync(initTime);
-
         await Task.WhenAll(nodesTask, connsTask, scTask);
         nodeList = nodesTask.Result;
         ConnectionList = connsTask.Result;
@@ -845,18 +844,19 @@ private void UpdateExistingMacNodeVisuals(Node nodeData)
         try
         {
             // 1) Ask DB for anything newer than lastFetchTime (Async)
-            var newNodes = dataManager.GetNodesAfterAsync(lastFetchTime).Result;
-            var newConns = dataManager.GetConnectionsAfterAsync(lastFetchTime).Result;
-            var newSubs = dataManager.GetSubonnectionsAfterAsync(lastFetchTime).Result;
+            var nodesTask = dataManager.GetNodesAfterAsync(lastFetchTime);
+            var connsTask = dataManager.GetConnectionsAfterAsync(lastFetchTime);
+            var scTask = dataManager.GetSubonnectionsAfterAsync(lastFetchTime);
 
-            //await Task.WhenAll(nodesTask, connsTask, scTask);
-            //var newNodes = nodesTask.Result;
-            //var newConns = connsTask.Result;
-            //var newSubs = scTask.Result;
+            await Task.WhenAll(nodesTask, connsTask, scTask);
+            var newNodes = nodesTask.Result;
+            var newConns = connsTask.Result;
+            var newSubs = scTask.Result;
+
 
             // check for any new zeek alerts
-            //newNodes.AddRange(await dataManager.FlagWeirdNodes(lastFetchTime, newNodes));
-            //newNodes.AddRange(await dataManager.FlagAlertedNodes(lastFetchTime, newNodes));
+            //newNodes = await dataManager.FlagWeirdNodes(lastFetchTime, newNodes);
+            //newNodes = await dataManager.FlagAlertedNodes(lastFetchTime, newNodes);
 
             // Update visuals for nodes that already exist (warning/alert flags may change)
             foreach (var n in newNodes)
@@ -864,7 +864,7 @@ private void UpdateExistingMacNodeVisuals(Node nodeData)
                 UpdateExistingMacNodeVisuals(n);
             }
             
-            //var warningIps = newNodes.Where(node => node.isWarning).SelectMany(node => node.ips);
+            var warningIps = newNodes.Where(node => node.isWarning).SelectMany(node => node.ips);
 
 
             // 2) Update timestamps
@@ -885,6 +885,7 @@ private void UpdateExistingMacNodeVisuals(Node nodeData)
             }
 
             // 4) Process new Connections
+            //var newSubs = new List<SubConnection>();
             //foreach (var conn in newConns)
             //{
             //    // UPDATED: Use static helper

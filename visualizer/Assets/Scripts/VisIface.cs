@@ -207,7 +207,6 @@ public class VisIface : MonoBehaviour
             sc.node_b_macs = PhysicalAddress.Parse(macHexB);
             var l7 = (ushort)reader.GetValue(reader.GetOrdinal("l7_proto"));
             sc.protocol = (l7_proto)l7;
-            //sc.protocol = (l7_proto)reader.GetValue(reader.GetOrdinal("l7_proto"));
 
             subConnections.Add(sc);
         }
