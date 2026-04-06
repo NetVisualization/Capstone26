@@ -170,7 +170,7 @@ public class VisIface : MonoBehaviour
     /// <summary>
     /// Get all subconnections from the database after a certain time
     /// </summary>
-    public async Task<List<SubConnection>> GetSubonnectionsAfterAsync(DateTime time)
+    public async Task<List<SubConnection>> GetSubConnectionsAfterAsync(DateTime time)
     {
         string sql = @"
             SELECT

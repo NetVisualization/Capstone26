@@ -149,7 +149,7 @@ public IReadOnlyDictionary<IPAddress, List<GameObject>> EdgesByIp => edgesByIp;
         DateTime initTime = new DateTime(1970, 01, 01, 00, 00, 00);
         var nodesTask =  dataManager.GetNodesAfterAsync(initTime);
         var connsTask = dataManager.GetConnectionsAfterAsync(initTime);
-        var scTask = dataManager.GetSubonnectionsAfterAsync(initTime);
+        var scTask = dataManager.GetSubConnectionsAfterAsync(initTime);
         await Task.WhenAll(nodesTask, connsTask, scTask);
         nodeList = nodesTask.Result;
         ConnectionList = connsTask.Result;
@@ -846,7 +846,7 @@ private void UpdateExistingMacNodeVisuals(Node nodeData)
             // 1) Ask DB for anything newer than lastFetchTime (Async)
             var nodesTask = dataManager.GetNodesAfterAsync(lastFetchTime);
             var connsTask = dataManager.GetConnectionsAfterAsync(lastFetchTime);
-            var scTask = dataManager.GetSubonnectionsAfterAsync(lastFetchTime);
+            var scTask = dataManager.GetSubConnectionsAfterAsync(lastFetchTime);
 
             await Task.WhenAll(nodesTask, connsTask, scTask);
             var newNodes = nodesTask.Result;
