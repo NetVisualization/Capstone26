@@ -25,7 +25,7 @@ public class VisIface : MonoBehaviour
 
     // expose data to visualize to other unity scripts
     public List<Node> LoadedNodes { get; private set; }
-    public List<Connection> LoadedConnections { get; private set; }
+    public List<SubConnection> LoadedSubConnections { get; private set; }
 
     /// <summary>
     /// Connect to the database when spawnerScript is ready
@@ -44,8 +44,8 @@ public class VisIface : MonoBehaviour
                 await _connection.connect(DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASS);
                 DateTime initialDT = new DateTime(1970, 01, 01, 00, 00, 00);
                 LoadedNodes = await GetNodesAfterAsync(initialDT);
-                LoadedConnections = await GetConnectionsAfterAsync(initialDT);
-                Debug.Log($"Loaded {LoadedNodes.Count} nodes and {LoadedConnections.Count} connections.");
+                LoadedSubConnections = await GetSubConnectionsAfterAsync(initialDT);
+                Debug.Log($"Loaded {LoadedNodes.Count} nodes and {LoadedSubConnections.Count} connections.");
             }
             catch (Exception ex)
             {
@@ -110,9 +110,8 @@ public class VisIface : MonoBehaviour
         return nodes;
     }
 
-    /// <summary>
-    /// Get all connections from the database after a certain time
-    /// </summary>
+    /// <summary> WARNING: this function is currently deprecated and being replaced
+    /// with GetSubConnectionsAfterAsync; please don't add any features using it </summary>
     public async Task<List<Connection>> GetConnectionsAfterAsync(DateTime time)
     {
         string sql = @"
@@ -168,7 +167,53 @@ public class VisIface : MonoBehaviour
     }
 
     /// <summary>
-    /// Query the weird table and flag nodes that have warnings (will be colored yellow
+    /// Get all subconnections from the database after a certain time
+    /// </summary>
+    public async Task<List<SubConnection>> GetSubConnectionsAfterAsync(DateTime time)
+    {
+        string sql = @"
+            SELECT
+                LEAST(hex(src_mac),hex(dst_mac)) AS mac_a,
+                groupUniqArray(if(src_mac <= dst_mac, src_ip, dst_ip)) AS ip_a,
+                GREATEST(hex(src_mac), hex(dst_mac)) AS mac_b,
+                groupUniqArray(if(src_mac <= dst_mac, dst_ip, src_ip)) AS ip_b,
+                MIN(first_seen) AS first_seen, 
+                MAX(last_seen) AS last_seen,
+                SUM(pkts) AS pkts,
+                SUM(bytes) AS bytes,
+                arrayDistinct(arrayFlatten(groupArrayArray(if(src_mac <= dst_mac, src_ports, dst_ports)))) AS ports_a,
+                arrayDistinct(arrayFlatten(groupArrayArray(if(src_mac <= dst_mac, dst_ports, src_ports)))) AS ports_b,
+                l7_proto
+            FROM subconnections WHERE subconnections.first_seen > toDateTime(@time)
+            GROUP BY mac_a, mac_b, l7_proto;";
+
+        var parameters = new Dictionary<string, object> { { "time", time } };
+        List<SubConnection> subConnections = new List<SubConnection>();
+
+        using var reader = await _connection.ExecuteReader(sql, parameters);
+
+        while (reader.Read())
+        {
+            SubConnection sc = new SubConnection();
+            sc.node_a = ((IPAddress[])reader["ip_a"]).ToList();
+            sc.node_b = ((IPAddress[])reader["ip_b"]).ToList();
+            sc.pkts = Convert.ToUInt64(reader.GetValue(reader.GetOrdinal("pkts")));
+            sc.bytes = Convert.ToUInt64(reader.GetValue(reader.GetOrdinal("bytes")));
+            sc.first_seen = reader.GetDateTime(reader.GetOrdinal("first_seen"));
+            string macHexA = reader.GetString(reader.GetOrdinal("mac_a"));
+            sc.node_a_macs = PhysicalAddress.Parse(macHexA);
+            string macHexB = reader.GetString(reader.GetOrdinal("mac_b"));
+            sc.node_b_macs = PhysicalAddress.Parse(macHexB);
+            var l7 = (ushort)reader.GetValue(reader.GetOrdinal("l7_proto"));
+            sc.protocol = (l7_proto)l7;
+
+            subConnections.Add(sc);
+        }
+        return subConnections;
+    }
+
+    /// <summary>
+    /// Query the weird table and flag nodes that have warnings (will be colored yellow)
     /// </summary>
     public async Task<List<Node>> FlagWeirdNodes(DateTime time, List<Node> loadedNodes)
     {
