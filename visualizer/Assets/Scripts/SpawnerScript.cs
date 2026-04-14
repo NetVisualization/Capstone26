@@ -386,108 +386,140 @@ public IReadOnlyDictionary<IPAddress, List<GameObject>> EdgesByIp => edgesByIp;
     //  IP layer (subnet hubs + IP ring per subnet), aligned with MAC subnet order
     // ---------------------------------------------------------------------
     public void BuildIpLayerFromMacsSpreadAligned()
+{
+    // Only use the router's IPs to build the IP plane
+    if (routerMacGO == null)
     {
-        // 1) Collect IPs per subnet from all MACs
-        var ipsBySubnet = new Dictionary<string, List<IPAddress>>();
-        foreach (var macGO in spawnedMacNodes)
-        {
-            var ni = macGO.GetComponent<NodeInfo>();
-            if (ni == null || ni.data.ips == null) continue;
+        Debug.LogWarning("No router MAC found; skipping IP layer build.");
+        return;
+    }
 
-            foreach (var ip in ni.data.ips)
-            {
-                string key = SubnetKey(ip);
-                if (!ipsBySubnet.TryGetValue(key, out var list))
-                {
-                    list = new List<IPAddress>();
-                    ipsBySubnet[key] = list;
-                }
-                if (!list.Contains(ip)) list.Add(ip);
-            }
+    var routerInfo = routerMacGO.GetComponent<NodeInfo>();
+    if (routerInfo == null || routerInfo.data.ips == null || routerInfo.data.ips.Count == 0)
+    {
+        Debug.LogWarning("Router has no IPs; skipping IP layer build.");
+        return;
+    }
+
+    // 1) Collect ONLY router IPs per subnet
+    var ipsBySubnet = new Dictionary<string, List<IPAddress>>();
+
+    foreach (var ip in routerInfo.data.ips)
+    {
+        if (ip == null) continue;
+
+        string key = SubnetKey(ip);
+        if (!ipsBySubnet.TryGetValue(key, out var list))
+        {
+            list = new List<IPAddress>();
+            ipsBySubnet[key] = list;
         }
 
-        // 2) Place IP subnet hubs using the SAME angular order as MAC hubs
-        int count = subnetOrder.Count;
-        for (int i = 0; i < count; i++)
+        if (!list.Contains(ip))
+            list.Add(ip);
+    }
+
+    // 2) Place IP subnet hubs using the same angular order
+    int count = subnetOrder.Count;
+    for (int i = 0; i < count; i++)
+    {
+        string subnet = subnetOrder[i];
+        var hub = CreateOrGetIpSubnetHub(subnet);
+
+        float ang = (i / Mathf.Max(1f, (float)count)) * Mathf.PI * 2f;
+        hub.transform.position = new Vector3(
+            Mathf.Cos(ang) * IpSubnetRingRadius,
+            IpPlaneY,
+            Mathf.Sin(ang) * IpSubnetRingRadius
+        );
+    }
+
+    // 3) Place ONLY router-connected IPs
+    foreach (var kv in ipsBySubnet)
+    {
+        var hub = CreateOrGetIpSubnetHub(kv.Key);
+        var ips = kv.Value;
+        int m = ips.Count;
+        float localR = Mathf.Lerp(IpLocalRadiusMin, IpLocalRadiusMax, Mathf.Clamp01((m - 1) / 12f));
+
+        for (int i = 0; i < m; i++)
         {
-            string subnet = subnetOrder[i];
-            var hub = CreateOrGetIpSubnetHub(subnet);
+            var ip = ips[i];
+            var ipGO = CreateOrGetIpNode(ip);
 
-            float ang = (i / Mathf.Max(1f, (float)count)) * Mathf.PI * 2f;
-            hub.transform.position = new Vector3(Mathf.Cos(ang) * IpSubnetRingRadius, IpPlaneY, Mathf.Sin(ang) * IpSubnetRingRadius);
-        }
-
-        // 3) Place IPs around their subnet hub on a small ring
-        foreach (var kv in ipsBySubnet)
-        {
-            var hub = CreateOrGetIpSubnetHub(kv.Key);
-            var ips = kv.Value;
-            int m = ips.Count;
-            float localR = Mathf.Lerp(IpLocalRadiusMin, IpLocalRadiusMax, Mathf.Clamp01((m - 1) / 12f));
-
-            for (int i = 0; i < m; i++)
-            {
-                var ip = ips[i];
-                var ipGO = CreateOrGetIpNode(ip);
-                float t = (i / (float)m) * Mathf.PI * 2f;
-                Vector3 local = new Vector3(Mathf.Cos(t) * localR, 0f, Mathf.Sin(t) * localR);
-                Vector3 p = hub.transform.position + local; p.y = IpPlaneY;
-                ipGO.transform.position = p;
-            }
+            float t = (i / (float)m) * Mathf.PI * 2f;
+            Vector3 local = new Vector3(Mathf.Cos(t) * localR, 0f, Mathf.Sin(t) * localR);
+            Vector3 p = hub.transform.position + local;
+            p.y = IpPlaneY;
+            ipGO.transform.position = p;
         }
     }
+}
 
     // ---------------------------------------------------------------------
     //  MAC<->IP mapping edges (curved)
     // ---------------------------------------------------------------------
     void MakeMacIpMappingEdgesCurved()
+{
+    foreach (var macGO in spawnedMacNodes)
     {
-        foreach (var macGO in spawnedMacNodes)
+        var ni = macGO.GetComponent<NodeInfo>();
+        if (ni == null || ni.data.ips == null) continue;
+
+        foreach (var ip in ni.data.ips)
         {
-            var ni = macGO.GetComponent<NodeInfo>();
-            if (ni == null || ni.data.ips == null) continue;
+            // ONLY connect if router already caused this IP node to exist
+            if (!IpNodes.TryGetValue(ip, out var ipGO) || ipGO == null)
+                continue;
 
-            foreach (var ip in ni.data.ips)
+            if (curvedEdgePrefab != null && curvedEdgePrefab.GetComponent<LineRenderer>() != null)
             {
-                var ipGO = CreateOrGetIpNode(ip);
+                var edge = Instantiate(curvedEdgePrefab);
 
-                if (curvedEdgePrefab != null && curvedEdgePrefab.GetComponent<LineRenderer>() != null)
-                {
-                    var edge = Instantiate(curvedEdgePrefab);
+                var tag = edge.AddComponent<EdgeTag>();
+                tag.isMacIp = true;
+                tag.mac_a = ni.data.mac?.ToString();
+                tag.ip = ip;
+                tag.protocol = l7_proto.UNKNOWN;
 
-                    var tag = edge.AddComponent<EdgeTag>();
-                    tag.isMacIp = true;
-                    tag.mac_a = ni.data.mac?.ToString();
-                    tag.ip = ip;
-                    tag.protocol = l7_proto.UNKNOWN;
-                    
-                    spawnedConnections.Add(edge);
-                    RegisterEdge(edge, tag);
+                spawnedConnections.Add(edge);
+                RegisterEdge(edge, tag);
 
-                    var lr = edge.GetComponent<LineRenderer>();
-                    ApplyEdgeMaterial(lr, ConnectionMed);
-                    SetQuadraticCurve(lr, macGO.transform.position, ipGO.transform.position, bulge: 0.35f, segments: 20);
-                }
-                else
-                {
-                    var edge = Instantiate(connectionPrefab);
-                    var tag = edge.AddComponent<EdgeTag>();
-                    tag.isMacIp = true;
-                    tag.mac_a = ni.data.mac?.ToString();
-                    tag.ip = ip;
-                    tag.protocol = l7_proto.UNKNOWN;
+                var lr = edge.GetComponent<LineRenderer>();
+                ApplyEdgeMaterial(lr, ConnectionMed);
+                SetQuadraticCurve(lr, macGO.transform.position, ipGO.transform.position, bulge: 0.35f, segments: 20);
+            }
+            else
+            {
+                var edge = Instantiate(connectionPrefab);
 
-                    spawnedConnections.Add(edge);
-                    RegisterEdge(edge, tag);
-                    ConnectStraight(edge.transform, macGO.transform, ipGO.transform, ConnectionMed);
-                }
+                var tag = edge.AddComponent<EdgeTag>();
+                tag.isMacIp = true;
+                tag.mac_a = ni.data.mac?.ToString();
+                tag.ip = ip;
+                tag.protocol = l7_proto.UNKNOWN;
+
+                spawnedConnections.Add(edge);
+                RegisterEdge(edge, tag);
+                ConnectStraight(edge.transform, macGO.transform, ipGO.transform, ConnectionMed);
             }
         }
     }
+}
 
     // ---------------------------------------------------------------------
     //  Helpers (nodes, hubs, keys)
     // ---------------------------------------------------------------------
+    bool IsRouterMac(PhysicalAddress mac)
+{
+    if (routerMacGO == null || mac == null) return false;
+
+    var ni = routerMacGO.GetComponent<NodeInfo>();
+    if (ni == null || ni.data.mac == null) return false;
+
+    return ni.data.mac.Equals(mac);
+}
+
     GameObject CreateOrGetMacSubnetHub(string cidr)
     {
         if (MacSubnetHubs.TryGetValue(cidr, out var hub)) return hub;
@@ -876,7 +908,20 @@ private void UpdateExistingMacNodeVisuals(Node nodeData)
                 {
                     foreach (var ip in n.ips)
                     {
-                        var ipGO = CreateOrGetIpNode(ip);
+                        GameObject ipGO = null;
+
+                        // Router is allowed to create missing IP nodes
+                        if (IsRouterMac(n.mac))
+                        {
+                            ipGO = CreateOrGetIpNode(ip);
+                        }
+                        else
+                        {
+                            // Non-router MACs can only connect to IPs that already exist
+                            if (!IpNodes.TryGetValue(ip, out ipGO) || ipGO == null)
+                                continue;
+                        }
+
                         CreateMacIpEdge(macGO, ipGO, n.mac, ip);
                     }
                 }

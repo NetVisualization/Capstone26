@@ -187,6 +187,19 @@ public class FilterSystem : MonoBehaviour
 
         byte[] bytes = ip.GetAddressBytes();
 
+        // Unspecified ::
+        bool allZero = true;
+        for (int i = 0; i < bytes.Length; i++)
+        {
+            if (bytes[i] != 0)
+            {
+                allZero = false;
+                break;
+            }
+        }
+        if (allZero)
+            return true;
+
         // Multicast: ff00::/8
         if (bytes[0] == 0xFF)
             return true;
