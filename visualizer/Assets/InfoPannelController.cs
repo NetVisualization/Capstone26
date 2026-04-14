@@ -8,7 +8,6 @@ public class InfoPannelController : MonoBehaviour
     [SerializeField] private TextMeshProUGUI packetsValueText;
     [SerializeField] private TextMeshProUGUI bytesValueText;
 
-
     [Header("Scrolling Value Fields")]
     [SerializeField] private TextMeshProUGUI ipValueText;
     [SerializeField] private TextMeshProUGUI portsValueText;
@@ -79,18 +78,39 @@ public class InfoPannelController : MonoBehaviour
         RestartScrollers();
     }
 
-private void RestartScrollers()
-{
-    if (ipValueText != null) ipValueText.ForceMeshUpdate();
-    if (portsValueText != null) portsValueText.ForceMeshUpdate();
-    if (layer7ValueText != null) layer7ValueText.ForceMeshUpdate();
-    if (alertsValueText != null) alertsValueText.ForceMeshUpdate();
-    if (vendorValueText != null) vendorValueText.ForceMeshUpdate();
+    public void setText(IpTag data)
+    {
+        if (data == null)
+        {
+            Debug.LogWarning("IpTag data is null");
+            return;
+        }
 
-    if (ipScroller != null) ipScroller.ResetToStart();
-    if (portsScroller != null) portsScroller.ResetToStart();
-    if (layer7Scroller != null) layer7Scroller.ResetToStart();
-    if (alertsScroller != null) alertsScroller.ResetToStart();
-    if (vendorScroller != null) vendorScroller.ResetToStart();
-}
+        if (macValueText != null) macValueText.text = "IP Node";
+        if (packetsValueText != null) packetsValueText.text = "";
+        if (bytesValueText != null) bytesValueText.text = "";
+        if (vendorValueText != null) vendorValueText.text = "";
+
+        if (ipValueText != null) ipValueText.text = data.ipString;
+        if (portsValueText != null) portsValueText.text = "";
+        if (layer7ValueText != null) layer7ValueText.text = "";
+        if (alertsValueText != null) alertsValueText.text = "";
+
+        RestartScrollers();
+    }
+
+    private void RestartScrollers()
+    {
+        if (ipValueText != null) ipValueText.ForceMeshUpdate();
+        if (portsValueText != null) portsValueText.ForceMeshUpdate();
+        if (layer7ValueText != null) layer7ValueText.ForceMeshUpdate();
+        if (alertsValueText != null) alertsValueText.ForceMeshUpdate();
+        if (vendorValueText != null) vendorValueText.ForceMeshUpdate();
+
+        if (ipScroller != null) ipScroller.ResetToStart();
+        if (portsScroller != null) portsScroller.ResetToStart();
+        if (layer7Scroller != null) layer7Scroller.ResetToStart();
+        if (alertsScroller != null) alertsScroller.ResetToStart();
+        if (vendorScroller != null) vendorScroller.ResetToStart();
+    }
 }

@@ -9,52 +9,53 @@ public class showNodeInfo : MonoBehaviour
 {
     [SerializeField] private NodeInfo NodeData;
     [SerializeField] private ConnectionInfo ConnectionData;
+    [SerializeField] private IpTag IpData;
     [SerializeField] public InfoPannelController pannel;
+
     private XRBaseInteractable interactable;
-    // Start is called before the first frame update
+
     private void Awake()
     {
         if (!pannel) pannel = FindObjectOfType<InfoPannelController>(true);
         interactable = GetComponent<XRBaseInteractable>();
 
-        // find the sibling component on this connection object
-        if (ConnectionData == null)
+        if (interactable == null)
         {
-            ConnectionData = GetComponent<ConnectionInfo>();
+            Debug.LogError("showNodeInfo is missing XRBaseInteractable!");
         }
-
-        if (ConnectionData == null && NodeData == null)
-        {
-            Debug.LogError("showNodeInfo is missing a data source!");
-        }
-
-        //if (pannel)
-        //{
-        //    Debug.Log("Found panel");
-        //}
-        //else
-        //{
-        //    Debug.Log("Pannel not found");
-        //}
     }
+
     private void OnEnable()
     {
-
-        interactable.selectEntered.AddListener(OnSelect);
+        if (interactable != null)
+            interactable.selectEntered.AddListener(OnSelect);
     }
+
     private void OnDisable()
     {
-        interactable.selectEntered.RemoveListener(OnSelect);
+        if (interactable != null)
+            interactable.selectEntered.RemoveListener(OnSelect);
     }
 
     private void OnSelect(SelectEnterEventArgs args)
     {
         Debug.Log("selected something");
-        if (pannel && NodeData)
+
+        // Re-check at click time, because IpTag may be added after Awake()
+        IpData = GetComponent<IpTag>();
+        NodeData = GetComponent<NodeInfo>();
+        ConnectionData = GetComponent<ConnectionInfo>();
+
+        if (pannel && IpData != null)
+        {
+            Debug.Log($"trying to display IP {IpData.ipString}");
+            pannel.setText(IpData);
+        }
+        else if (pannel && NodeData != null)
         {
             pannel.setText(NodeData);
         }
-        else if (pannel && ConnectionData)
+        else if (pannel && ConnectionData != null)
         {
             Debug.Log($"trying to display {ConnectionData}");
             pannel.setText(ConnectionData);
