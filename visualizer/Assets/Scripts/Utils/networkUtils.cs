@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using Unity.VisualScripting;
 using UnityEngine;
 
 public static class NetworkUtils
@@ -69,5 +70,28 @@ public static class NetworkUtils
                 return ip.ToString(); 
             }
         }));
+    }
+
+    public static string GetStandardizedIPString(string ipAddresses)
+    {
+        if (ipAddresses == null)
+        {
+            return string.Empty;
+        }
+
+        IPAddress.TryParse(ipAddresses, out IPAddress ip);
+        if (ip == null)
+        {
+            return string.Empty;
+        }
+
+        if (ip.IsIPv4MappedToIPv6)
+        {
+            return ip.MapToIPv4().ToString();
+        }
+        else
+        {
+            return ip.ToString();
+        }
     }
 }
