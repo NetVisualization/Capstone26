@@ -26,7 +26,7 @@ This network visualization project aims to display real-time network nodes and c
 
 
 
-## Initial Setup and Main Components 
+# Initial Setup and Main Components 
 
 The implementation and usage of this application requires a properly set-up development environment. This section will list each component required, with other following sections and separate .md files going on more in-depth walkthroughs to configure the proper settings. 
 
@@ -114,8 +114,17 @@ The parser is coded in Rust and is responsible for parsing the live data traffic
 
 ### Database (Clickhouse) 
 
-The database stores the information parsed from the input pcap file. We utilized Clickhouse for its implementation. In our case, we hosted our database on a local web server utilizing port 8123. In this configuration, we can access the database directly through the URL http://[your IP]:8123 while on our local internet source (though USAFA firewall/security configurations may need to be altered to accomplish this) 
+The database stores the information parsed from the input pcap file. We utilized Clickhouse for its implementation. In our case, we hosted our database on a local web server utilizing port 8123. In this configuration, we can access the database directly through the URL http://[your_IP]:8123 while on our local internet source (though USAFA firewall/security configurations may need to be altered to accomplish this) 
 
  
 
-### IDS Setup: (TODO later) 
+### IDS Setup and Zeek Configuration:
+
+Zeek provides Intrusion Detection Capabilities that can be rendered by the visualization​.
+
+Red nodes: specific alerts configured by the user were triggered​
+
+Yellow Nodes: truncated or malformed packets, indicating network bottlenecks or malicious
+activity
+
+![Project Screenshot](alerts.png)
