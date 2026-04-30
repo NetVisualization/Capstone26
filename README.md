@@ -1,7 +1,8 @@
 # Network Visualization Capstone
 
 ---
-
+## NOTE FOR FUTURE TEAM
+As of 4/30/26, The project repository contains a file under the documentation folder containing sensitive usernames and passwords for infrastructure relating to the project. This information should be moved before sharing this project with others.
 
 ## 2025-2026 Team Members 
 
