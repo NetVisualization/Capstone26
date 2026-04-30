@@ -91,7 +91,7 @@ run_zeek_import() {
     PYTHON_BIN="python3"
   fi
 
-  echo "➡️  Importing Zeek weird.log via zeek2ch..."
+  echo "Importing Zeek weird.log via zeek2ch..."
   "$PYTHON_BIN" "$WEIRD_PY" \
     --host "$CH_HOST" \
     --port "$CH_PORT" \
@@ -166,7 +166,7 @@ if [[ "$MODE" == "1" ]]; then
         # Export this variable so docker-compose.yml can read it
         export ZEEK_IFACE=$ZEEK_IFACE
 
-        # check if docker container already exsists
+        # check if docker container already exists
         RUNNING_CONTAINERS=$(docker ps -a --format '{{.Names}}')
         if $(echo "$RUNNING_CONTAINERS" | grep -q "clickhouse") || $(echo "$RUNNING_CONTAINERS" | grep -q "zeek"); then
             echo "⚠️  Docker containers already exist. Removing to ensure updates are applied..."
@@ -176,7 +176,8 @@ if [[ "$MODE" == "1" ]]; then
         echo "➡️  Launching NetVis stack on interface: $ZEEK_IFACE..."
         (cd "$DOCKER_DIR" && docker compose up -d)
 
-        echo "Containers are starting. Use Option 2 next for live capture."
+        # Combined and comprehensive startup message
+        echo "Containers are starting. Database schema will be initialized automatically. Use Option 2 next for live capture."
         exit 0
 fi
 
@@ -256,7 +257,7 @@ case "$MODE" in
     ;;
 
   4) # Reset DB (404 Fix: Target root / and use fully qualified names)
-    echo "➡️  Discovering tables in $CH_DB..."
+    echo "Discovering tables in $CH_DB..."
 
     TABLES=$(curl -fsS -u "$CH_USER:$CH_PASSWORD" \
       --data-binary "SELECT name FROM system.tables WHERE database='$CH_DB' AND engine LIKE '%MergeTree%'" \
@@ -278,7 +279,7 @@ case "$MODE" in
           --data-binary "TRUNCATE TABLE $CH_DB.$T" \
           "$CH_URL/?wait_end_of_query=1"
       done
-      echo "🎯 Reset complete."
+      echo "Reset complete."
     else
       echo "Aborted."
     fi

@@ -1,3 +1,4 @@
+using System.Reflection;
 using TMPro;
 using UnityEngine;
 
@@ -65,6 +66,16 @@ public class InfoPannelController : MonoBehaviour
         string mac1 = node.node_a_macs != null ? node.node_a_macs.ToString() : "";
         string mac2 = node.node_b_macs != null ? node.node_b_macs.ToString() : "";
 
+        // workaround to handle connections to external nodes
+        if ((mac1 == "") || (mac2 == ""))
+        {
+            packetsValueText.text = "";
+            bytesValueText.text = "";
+            RestartScrollers();
+            return;
+        }
+
+
         if (macValueText != null) macValueText.text = $"{mac1}  <->  {mac2}";
         if (packetsValueText != null) packetsValueText.text = node.pkts.ToString();
         if (bytesValueText != null) bytesValueText.text = node.bytes.ToString();
@@ -86,12 +97,12 @@ public class InfoPannelController : MonoBehaviour
             return;
         }
 
-        if (macValueText != null) macValueText.text = "IP Node";
+        if (macValueText != null) macValueText.text = "External Site";
         if (packetsValueText != null) packetsValueText.text = "";
         if (bytesValueText != null) bytesValueText.text = "";
         if (vendorValueText != null) vendorValueText.text = "";
 
-        if (ipValueText != null) ipValueText.text = data.ipString;
+        if (ipValueText != null) ipValueText.text = NetworkUtils.GetStandardizedIPString(data.ipString);
         if (portsValueText != null) portsValueText.text = "";
         if (layer7ValueText != null) layer7ValueText.text = "";
         if (alertsValueText != null) alertsValueText.text = "";

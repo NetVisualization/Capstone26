@@ -160,7 +160,7 @@ target
 !**/Packages/packages-lock.json
 
 # OS Generated Junk
-*/.DS_Store
+**/.DS_Store
 .DS_Store
 Thumbs.db
 ehthumbs.db
