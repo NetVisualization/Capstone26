@@ -1,0 +1,204 @@
+OVERVIEW
+
+This project is a Unity-based VR network visualization system designed to transform real network traffic data into an interactive 3D graph.
+
+The system renders:
+
+MAC nodes (devices)
+IP nodes (addresses)
+Connections (network traffic)
+
+Users can explore the network in VR, inspect nodes, and filter traffic in real time.
+
+SYSTEM ARCHITECTURE
+
+The system is organized into five layers:
+
+DATA LAYER
+VisIface
+Handles database communication
+Converts raw data into structured models (Node, SubConnection)
+Keeps data logic separate from Unity scene logic
+SCENE CONSTRUCTION LAYER
+NodeSpawnerScript
+Core orchestrator of the visualization
+Builds the graph in multiple stages:
+MAC node creation
+Subnet-based layout
+MAC-to-MAC connections
+IP layer generation
+MAC-to-IP edges
+Applies layout relaxation to reduce overlap
+INTERACTION LAYER
+ShowNodeInfo
+Handles XR-based object selection
+Sends selected object data to the UI
+
+RayTargetModeToggle
+
+Controls interaction modes:
+Nodes only
+Connections only
+Both
+UI only
+FILTERING LAYER
+FilterSystem
+Controls visibility rules
+Filters based on:
+Protocol
+MAC/IP connections
+IPv6 noise
+Noisy MACs
+
+FilterButtonVisual
+
+UI buttons for toggling filters
+Sends commands to FilterSystem
+UI LAYER
+InfoPanelController
+Displays selected data
+Formats node/connection information
+
+AutoScrollTMP
+
+Scrolls long text fields (IPs, ports, protocols)
+
+Panel Scripts
+
+Control UI placement and visibility in VR
+RUNTIME FLOW
+
+STARTUP SEQUENCE
+
+Initialize data source (VisIface)
+Fetch nodes and connections
+Generate MAC nodes
+Layout MAC subnet rings
+Create MAC-to-MAC edges
+Generate IP layer
+Create MAC-to-IP edges
+Apply default filters
+
+LIVE UPDATE LOOP
+
+Poll for new traffic
+Spawn new nodes if needed
+Add new connections
+Update node alerts/warnings
+Reapply filters
+
+USER INTERACTION FLOW
+
+User selects object with XR ray
+ShowNodeInfo identifies object type
+InfoPanelController updates UI
+AutoScrollTMP scrolls long content
+DATA MODEL
+
+Node (Device / MAC Level)
+
+MAC address
+IP addresses
+Packet count
+Byte count
+First/last seen
+Protocols
+Alerts/warnings
+
+SubConnection (Traffic)
+
+Source/destination MACs
+Source/destination IPs
+Protocol
+Packet/byte counts
+Timestamps
+KEY FEATURES
+Dual-layer visualization (MAC + IP)
+Subnet-based layout using rings
+Protocol-based edge grouping
+VR ray interaction system
+Dynamic filtering system
+Real-time updates
+REFACTOR AND CLEANUP PLAN
+
+HIGH PRIORITY
+
+Standardize naming:
+showNodeInfo -> ShowNodeInfo
+InfoPannelController -> InfoPanelController
+Remove unused scripts:
+NodeBehaviour, NodeData, ConnectionData, NodeInformation
+Require all selectable objects to include:
+XRBaseInteractable
+ShowNodeInfo
+
+MEDIUM PRIORITY
+
+Replace magic strings with constants
+Clarify filter logic naming
+Remove unused variables and code
+Add prefab validation checks
+
+LOW PRIORITY
+
+Document router-only IP creation behavior
+SUGGESTED FUTURE ARCHITECTURE
+
+Data Layer:
+VisIface
+
+Domain Layer:
+Node, SubConnection, enums
+
+Scene Layer:
+NodeSpawnService
+GraphLayoutService
+EdgeFactory
+
+Interaction Layer:
+Ray controller
+Selection handler
+
+UI Layer:
+Panel controller
+Layout scripts
+
+Filtering Layer:
+FilterSystem
+
+SETUP AND USAGE
+
+Requirements:
+
+Unity (XR enabled)
+XR Interaction Toolkit
+Input System
+TextMeshPro
+
+Setup Steps:
+
+Clone repository
+Open project in Unity
+Configure XR Interaction Toolkit
+Load main scene
+Run in VR mode
+
+Controls:
+
+XR Ray -> Select objects
+Toggle button -> Change interaction mode
+Filter panel -> Enable/disable filters
+KNOWN DESIGN DECISIONS
+IP nodes are created through router logic only
+This prevents duplication and reduces clutter
+MAC and IP layers are separated vertically
+Improves readability in VR
+IMMEDIATE NEXT STEPS
+Finalize naming consistency
+Remove unused scripts
+Add prefab validation checklist
+Stabilize build before major refactor
+Create developer onboarding guide
+AUTHORS
+
+Capstone Team - Network Visualization Project
