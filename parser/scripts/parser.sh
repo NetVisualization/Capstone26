@@ -187,7 +187,7 @@ ask "ClickHouse Host"     CH_HOST     "${CH_HOST:-localhost}"
 ask "ClickHouse Port"     CH_PORT     "${CH_PORT:-8123}"
 ask "ClickHouse User"     CH_USER     "${CH_USER:-capstone}"
 ask_secret "ClickHouse Password"      CH_PASSWORD
-CH_PASSWORD="${CH_PASSWORD:-boogle}"
+CH_PASSWORD="${CH_PASSWORD}"
 CH_URL="http://${CH_HOST}:${CH_PORT}"
 
 case "$MODE" in
